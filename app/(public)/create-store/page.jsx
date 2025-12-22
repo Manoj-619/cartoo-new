@@ -78,7 +78,9 @@ export default function CreateStore() {
             formData.append("email", storeInfo.email)
             formData.append("contact", storeInfo.contact)
             formData.append("address", storeInfo.address)
-            formData.append("image", storeInfo.image)
+            if(storeInfo.image){
+                formData.append("image", storeInfo.image)
+            }
 
             const { data } = await axios.post('/api/store/create', formData, {headers: {Authorization: `Bearer ${token}`}})
             toast.success(data.message)
@@ -115,7 +117,7 @@ export default function CreateStore() {
                         </div>
 
                         <label className="mt-10 cursor-pointer">
-                            Store Logo
+                            Store Logo <span className="text-slate-400 text-sm">(Optional)</span>
                             <Image src={storeInfo.image ? URL.createObjectURL(storeInfo.image) : assets.upload_area} className="rounded-lg mt-2 h-16 w-auto" alt="" width={150} height={100} />
                             <input type="file" accept="image/*" onChange={(e) => setStoreInfo({ ...storeInfo, image: e.target.files[0] })} hidden />
                         </label>
