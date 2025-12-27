@@ -21,6 +21,12 @@ export async function POST(request){
         const price = Number(formData.get("price"))
         const category = formData.get("category")
         const images = formData.getAll("images")
+        const colorsRaw = formData.get("colors")
+        const sizesRaw = formData.get("sizes")
+
+        // Parse colors and sizes from comma-separated strings
+        const colors = colorsRaw ? colorsRaw.split(",").map(c => c.trim()).filter(Boolean) : []
+        const sizes = sizesRaw ? sizesRaw.split(",").map(s => s.trim()).filter(Boolean) : []
 
         if(!name || !description || !mrp || !price || !category || images.length < 1){
             return NextResponse.json({error: 'missing product details'}, { status: 400 } )
@@ -52,6 +58,8 @@ export async function POST(request){
                 mrp,
                 price,
                 category,
+                colors,
+                sizes,
                 images: imagesUrl,
                 storeId
              }

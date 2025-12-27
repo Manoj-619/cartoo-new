@@ -14,12 +14,15 @@ const OrderSummary = ({ totalPrice, items }) => {
     const { getToken } = useAuth()
     const dispatch = useDispatch()
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$';
+    
+    // Feature toggle for COD - set NEXT_PUBLIC_ENABLE_COD=true in .env to enable
+    const enableCOD = process.env.NEXT_PUBLIC_ENABLE_COD === 'true';
 
     const router = useRouter();
 
     const addressList = useSelector(state => state.address.list);
 
-    const [paymentMethod, setPaymentMethod] = useState('COD');
+    const [paymentMethod, setPaymentMethod] = useState(enableCOD ? 'COD' : 'STRIPE');
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [showAddressModal, setShowAddressModal] = useState(false);
     const [couponCodeInput, setCouponCodeInput] = useState('');
@@ -87,11 +90,13 @@ const OrderSummary = ({ totalPrice, items }) => {
         <div className='w-full max-w-lg lg:max-w-[340px] bg-slate-50/30 border border-slate-200 text-slate-500 text-sm rounded-xl p-7'>
             <h2 className='text-xl font-medium text-slate-600'>Payment Summary</h2>
             <p className='text-slate-400 text-xs my-4'>Payment Method</p>
-            <div className='flex gap-2 items-center'>
-                <input type="radio" id="COD" onChange={() => setPaymentMethod('COD')} checked={paymentMethod === 'COD'} className='accent-gray-500' />
-                <label htmlFor="COD" className='cursor-pointer'>COD</label>
-            </div>
-            <div className='flex gap-2 items-center mt-1'>
+            {enableCOD && (
+                <div className='flex gap-2 items-center'>
+                    <input type="radio" id="COD" onChange={() => setPaymentMethod('COD')} checked={paymentMethod === 'COD'} className='accent-gray-500' />
+                    <label htmlFor="COD" className='cursor-pointer'>Cash on Delivery</label>
+                </div>
+            )}
+            <div className={`flex gap-2 items-center ${enableCOD ? 'mt-1' : ''}`}>
                 <input type="radio" id="STRIPE" name='payment' onChange={() => setPaymentMethod('STRIPE')} checked={paymentMethod === 'STRIPE'} className='accent-gray-500' />
                 <label htmlFor="STRIPE" className='cursor-pointer'>Stripe Payment</label>
             </div>
