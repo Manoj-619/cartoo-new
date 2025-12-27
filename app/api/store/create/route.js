@@ -67,21 +67,15 @@ export async function POST(request){
 
         const newStore = await prisma.store.create({
             data: {
-                userId,
                 name,
                 description,
                 username: username.toLowerCase(),
                 email,
                 contact,
                 address,
-                logo: optimizedImage
+                logo: optimizedImage,
+                user: { connect: { id: userId } }
             }
-        })
-
-        //  link store to user
-        await prisma.user.update({
-            where: { id: userId },
-            data: {store: {connect: {id: newStore.id}}}
         })
 
         return NextResponse.json({message: "applied, waiting for approval"})

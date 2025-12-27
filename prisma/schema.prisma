@@ -151,7 +151,7 @@ model Store {
     address     String
     status      String   @default("pending")
     isActive    Boolean  @default(false)
-    logo        String
+    logo        String?
     email       String
     contact     String
     createdAt   DateTime @default(now())
