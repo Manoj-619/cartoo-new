@@ -7,6 +7,7 @@ import Link from "next/link"
 import Image from "next/image"
 import Loading from "@/components/Loading"
 import { toast } from "react-hot-toast"
+import MasterLayout from "@/components/master/MasterLayout";
 
 export default function MasterStores() {
     const { getToken } = useAuth()
@@ -152,211 +153,213 @@ export default function MasterStores() {
     if (loading) return <Loading />
 
     return (
-        <div className="max-w-6xl">
-            <h1 className="text-2xl font-semibold text-slate-800 mb-2">All Stores</h1>
-            <p className="text-slate-500 mb-6">Manage all vendor stores on the platform</p>
+        <MasterLayout>
+            <div className="max-w-6xl">
+                <h1 className="text-2xl font-semibold text-slate-800 mb-2">All Stores</h1>
+                <p className="text-slate-500 mb-6">Manage all vendor stores on the platform</p>
 
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="relative flex-1">
-                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                        type="text"
-                        placeholder="Search stores..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400"
-                    />
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div className="relative flex-1">
+                        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search stores..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400"
+                        />
+                    </div>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        className="px-4 py-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400 bg-white"
+                    >
+                        <option value="all">All Stores ({stores.length})</option>
+                        <option value="active">Active ({stores.filter(s => s.isActive).length})</option>
+                        <option value="inactive">Inactive ({stores.filter(s => !s.isActive && s.status !== 'pending').length})</option>
+                        <option value="pending">Pending ({stores.filter(s => s.status === 'pending').length})</option>
+                    </select>
                 </div>
-                <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="px-4 py-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400 bg-white"
-                >
-                    <option value="all">All Stores ({stores.length})</option>
-                    <option value="active">Active ({stores.filter(s => s.isActive).length})</option>
-                    <option value="inactive">Inactive ({stores.filter(s => !s.isActive && s.status !== 'pending').length})</option>
-                    <option value="pending">Pending ({stores.filter(s => s.status === 'pending').length})</option>
-                </select>
-            </div>
 
-            {/* Stores Grid */}
-            <div className="grid gap-4">
-                {filteredStores.map((store) => (
-                    <div key={store.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition">
-                        <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                                {store.logo ? (
-                                    <Image src={store.logo} alt="" width={56} height={56} className="w-14 h-14 rounded-xl object-cover" />
-                                ) : (
-                                    <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 text-xl font-semibold">
-                                        {store.name?.charAt(0)?.toUpperCase()}
+                {/* Stores Grid */}
+                <div className="grid gap-4">
+                    {filteredStores.map((store) => (
+                        <div key={store.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                    {store.logo ? (
+                                        <Image src={store.logo} alt="" width={56} height={56} className="w-14 h-14 rounded-xl object-cover" />
+                                    ) : (
+                                        <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 text-xl font-semibold">
+                                            {store.name?.charAt(0)?.toUpperCase()}
+                                        </div>
+                                    )}
+                                    <div>
+                                        <h3 className="font-semibold text-slate-800">{store.name}</h3>
+                                        <p className="text-sm text-slate-500">@{store.username}</p>
+                                        <p className="text-sm text-slate-400">{store.email}</p>
                                     </div>
-                                )}
-                                <div>
-                                    <h3 className="font-semibold text-slate-800">{store.name}</h3>
-                                    <p className="text-sm text-slate-500">@{store.username}</p>
-                                    <p className="text-sm text-slate-400">{store.email}</p>
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                        store.isActive 
+                                            ? 'bg-green-100 text-green-700' 
+                                            : store.status === 'pending' 
+                                                ? 'bg-yellow-100 text-yellow-700'
+                                                : 'bg-red-100 text-red-700'
+                                    }`}>
+                                        {store.isActive ? 'Active' : store.status === 'pending' ? 'Pending' : 'Inactive'}
+                                    </span>
                                 </div>
                             </div>
-                            
-                            <div className="flex items-center gap-2">
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                    store.isActive 
-                                        ? 'bg-green-100 text-green-700' 
-                                        : store.status === 'pending' 
-                                            ? 'bg-yellow-100 text-yellow-700'
-                                            : 'bg-red-100 text-red-700'
-                                }`}>
-                                    {store.isActive ? 'Active' : store.status === 'pending' ? 'Pending' : 'Inactive'}
-                                </span>
+
+                            <div className="flex items-center gap-6 mt-4 pt-4 border-t border-slate-100">
+                                <div className="flex items-center gap-2 text-sm text-slate-500">
+                                    <Package size={16} />
+                                    <span>{store._count?.Product || 0} products</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-slate-500">
+                                    <ShoppingCart size={16} />
+                                    <span>{store._count?.Order || 0} orders</span>
+                                </div>
+                                
+                                <div className="flex-1"></div>
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center gap-2">
+                                    {store.status === 'pending' ? (
+                                        <>
+                                            <button
+                                                onClick={() => approveStore(store)}
+                                                className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition"
+                                            >
+                                                <Check size={14} /> Approve
+                                            </button>
+                                            <button
+                                                onClick={() => rejectStore(store)}
+                                                className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition"
+                                            >
+                                                <X size={14} /> Reject
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Link
+                                                href={`/master/store/${store.id}/products`}
+                                                className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 transition"
+                                            >
+                                                Manage
+                                            </Link>
+                                            <button
+                                                onClick={() => toggleStoreStatus(store)}
+                                                className={`p-1.5 rounded-lg transition ${store.isActive ? 'text-orange-600 hover:bg-orange-50' : 'text-green-600 hover:bg-green-50'}`}
+                                                title={store.isActive ? 'Deactivate' : 'Activate'}
+                                            >
+                                                <Power size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => openEditModal(store)}
+                                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                                title="Edit"
+                                            >
+                                                <Pencil size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => { setDeletingStore(store); setShowDeleteModal(true); }}
+                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         </div>
+                    ))}
+                </div>
 
-                        <div className="flex items-center gap-6 mt-4 pt-4 border-t border-slate-100">
-                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                                <Package size={16} />
-                                <span>{store._count?.Product || 0} products</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                                <ShoppingCart size={16} />
-                                <span>{store._count?.Order || 0} orders</span>
-                            </div>
-                            
-                            <div className="flex-1"></div>
+                {filteredStores.length === 0 && (
+                    <p className="text-center text-slate-500 py-12">No stores found</p>
+                )}
 
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-2">
-                                {store.status === 'pending' ? (
-                                    <>
-                                        <button
-                                            onClick={() => approveStore(store)}
-                                            className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition"
-                                        >
-                                            <Check size={14} /> Approve
-                                        </button>
-                                        <button
-                                            onClick={() => rejectStore(store)}
-                                            className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition"
-                                        >
-                                            <X size={14} /> Reject
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Link
-                                            href={`/master/store/${store.id}/products`}
-                                            className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 transition"
-                                        >
-                                            Manage
-                                        </Link>
-                                        <button
-                                            onClick={() => toggleStoreStatus(store)}
-                                            className={`p-1.5 rounded-lg transition ${store.isActive ? 'text-orange-600 hover:bg-orange-50' : 'text-green-600 hover:bg-green-50'}`}
-                                            title={store.isActive ? 'Deactivate' : 'Activate'}
-                                        >
-                                            <Power size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => openEditModal(store)}
-                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                            title="Edit"
-                                        >
-                                            <Pencil size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => { setDeletingStore(store); setShowDeleteModal(true); }}
-                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </>
-                                )}
-                            </div>
+                {/* Edit Modal */}
+                {showEditModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                            <h2 className="text-xl font-semibold text-slate-800 mb-4">Edit Store</h2>
+                            <form onSubmit={handleEditSubmit}>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm text-slate-600 mb-1">Store Name</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.name}
+                                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                            className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-slate-600 mb-1">Description</label>
+                                        <textarea
+                                            value={editForm.description}
+                                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                            rows={3}
+                                            className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400 resize-none"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEditModal(false)}
+                                        className="flex-1 py-2.5 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                                    >
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
-                ))}
-            </div>
+                )}
 
-            {filteredStores.length === 0 && (
-                <p className="text-center text-slate-500 py-12">No stores found</p>
-            )}
-
-            {/* Edit Modal */}
-            {showEditModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-md">
-                        <h2 className="text-xl font-semibold text-slate-800 mb-4">Edit Store</h2>
-                        <form onSubmit={handleEditSubmit}>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm text-slate-600 mb-1">Store Name</label>
-                                    <input
-                                        type="text"
-                                        value={editForm.name}
-                                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                        className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-slate-600 mb-1">Description</label>
-                                    <textarea
-                                        value={editForm.description}
-                                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                        rows={3}
-                                        className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400 resize-none"
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex gap-3 mt-6">
+                {/* Delete Modal */}
+                {showDeleteModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl p-6 w-full max-w-sm">
+                            <h2 className="text-xl font-semibold text-slate-800 mb-2">Delete Store</h2>
+                            <p className="text-slate-600 mb-6">
+                                Are you sure you want to delete <span className="font-medium">{deletingStore?.name}</span>? 
+                                This will also delete all products and orders.
+                            </p>
+                            <div className="flex gap-3">
                                 <button
-                                    type="button"
-                                    onClick={() => setShowEditModal(false)}
+                                    onClick={() => setShowDeleteModal(false)}
                                     className="flex-1 py-2.5 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50"
                                 >
                                     Cancel
                                 </button>
                                 <button
-                                    type="submit"
-                                    className="flex-1 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                                    onClick={handleDelete}
+                                    className="flex-1 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700"
                                 >
-                                    Save Changes
+                                    Delete
                                 </button>
                             </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Delete Modal */}
-            {showDeleteModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-sm">
-                        <h2 className="text-xl font-semibold text-slate-800 mb-2">Delete Store</h2>
-                        <p className="text-slate-600 mb-6">
-                            Are you sure you want to delete <span className="font-medium">{deletingStore?.name}</span>? 
-                            This will also delete all products and orders.
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowDeleteModal(false)}
-                                className="flex-1 py-2.5 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDelete}
-                                className="flex-1 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                            >
-                                Delete
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+        </MasterLayout>
     )
 }

@@ -10,9 +10,7 @@ export default function RootMasterLayout({ children }) {
     return (
         <>
             <SignedIn>
-                <MasterLayout>
-                    {children}
-                </MasterLayout>
+                {children}
             </SignedIn>
             <SignedOut>
                 <div className="min-h-screen flex items-center justify-center bg-slate-50">
