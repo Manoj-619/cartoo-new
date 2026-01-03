@@ -2,43 +2,48 @@
 import { assets } from "@/assets/assets"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
-import { X, Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, Package } from "lucide-react"
 import Image from "next/image"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
 
-const availableColors = ['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Pink', 'Purple', 'Orange', 'Gray', 'Brown']
 const categories = ['Electronics', 'Clothing', 'Home & Kitchen', 'Beauty & Health', 'Toys & Games', 'Sports & Outdoors', 'Books & Media', 'Food & Drink', 'Hobbies & Crafts', 'Others']
+const gstOptions = [0, 5, 18, 40]
 
-const createEmptyProduct = () => ({
-    id: Date.now(),
-    images: { 1: null, 2: null, 3: null, 4: null },
+const createEmptyVariant = () => ({
+    id: Date.now() + Math.random(),
     name: "",
-    description: "",
-    mrp: 0,
-    price: 0,
-    category: "",
-    colors: [],
-    sizes: [],
-    sizeInput: "",
-    aiUsed: false
+    color: "",
+    colorHex: "#000000",
+    mrp: "",
+    price: "",
+    images: { 1: null, 2: null, 3: null, 4: null }
 })
 
 export default function StoreAddProduct() {
-    const [products, setProducts] = useState([createEmptyProduct()])
     const [loading, setLoading] = useState(false)
     const { getToken } = useAuth()
+    
+    // Product info (shared across variants)
+    const [productName, setProductName] = useState("")
+    const [description, setDescription] = useState("")
+    const [category, setCategory] = useState("")
+    const [gst, setGst] = useState(0)
+    const [aiUsed, setAiUsed] = useState(false)
+    
+    // Variants
+    const [variants, setVariants] = useState([createEmptyVariant()])
 
-    const updateProduct = (index, field, value) => {
-        setProducts(prev => prev.map((p, i) => i === index ? { ...p, [field]: value } : p))
+    const updateVariant = (index, field, value) => {
+        setVariants(prev => prev.map((v, i) => i === index ? { ...v, [field]: value } : v))
     }
 
-    const handleImageUpload = async (productIndex, imageKey, file) => {
-        const product = products[productIndex]
-        updateProduct(productIndex, 'images', { ...product.images, [imageKey]: file })
+    const handleImageUpload = async (variantIndex, imageKey, file) => {
+        const variant = variants[variantIndex]
+        updateVariant(variantIndex, 'images', { ...variant.images, [imageKey]: file })
 
-        // AI analysis for first image
-        if (imageKey === "1" && file && !product.aiUsed) {
+        // AI analysis for first image of first variant
+        if (variantIndex === 0 && imageKey === "1" && file && !aiUsed) {
             const reader = new FileReader()
             reader.readAsDataURL(file)
             reader.onloadend = async () => {
@@ -54,16 +59,13 @@ export default function StoreAddProduct() {
                             { headers: { Authorization: `Bearer ${token}` } }
                         ),
                         {
-                            loading: `Analyzing image for Product ${productIndex + 1}...`,
+                            loading: "Analyzing image with AI...",
                             success: (res) => {
                                 const data = res.data
                                 if (data.name && data.description) {
-                                    setProducts(prev => prev.map((p, i) => i === productIndex ? {
-                                        ...p,
-                                        name: data.name,
-                                        description: data.description,
-                                        aiUsed: true
-                                    } : p))
+                                    setProductName(data.name)
+                                    setDescription(data.description)
+                                    setAiUsed(true)
                                     return "AI filled product info 🎉"
                                 }
                                 return "AI could not analyze the image"
@@ -78,94 +80,85 @@ export default function StoreAddProduct() {
         }
     }
 
-    const addProduct = () => {
-        setProducts(prev => [...prev, createEmptyProduct()])
+    const addVariant = () => {
+        // Copy price from last variant for convenience
+        const lastVariant = variants[variants.length - 1]
+        const newVariant = createEmptyVariant()
+        if (lastVariant.mrp) newVariant.mrp = lastVariant.mrp
+        if (lastVariant.price) newVariant.price = lastVariant.price
+        setVariants(prev => [...prev, newVariant])
     }
 
-    const removeProduct = (index) => {
-        if (products.length > 1) {
-            setProducts(prev => prev.filter((_, i) => i !== index))
+    const removeVariant = (index) => {
+        if (variants.length > 1) {
+            setVariants(prev => prev.filter((_, i) => i !== index))
         }
-    }
-
-    const toggleColor = (productIndex, color) => {
-        const product = products[productIndex]
-        const newColors = product.colors.includes(color)
-            ? product.colors.filter(c => c !== color)
-            : [...product.colors, color]
-        updateProduct(productIndex, 'colors', newColors)
-    }
-
-    const addSize = (productIndex) => {
-        const product = products[productIndex]
-        if (product.sizeInput.trim()) {
-            const newSize = product.sizeInput.trim().toUpperCase()
-            if (!product.sizes.includes(newSize)) {
-                updateProduct(productIndex, 'sizes', [...product.sizes, newSize])
-                updateProduct(productIndex, 'sizeInput', "")
-            } else {
-                toast.error("Size already added")
-            }
-        }
-    }
-
-    const removeSize = (productIndex, sizeIndex) => {
-        const product = products[productIndex]
-        updateProduct(productIndex, 'sizes', product.sizes.filter((_, i) => i !== sizeIndex))
     }
 
     const onSubmitHandler = async (e) => {
         e.preventDefault()
         
-        // Validate all products
-        for (let i = 0; i < products.length; i++) {
-            const p = products[i]
-            if (!p.images[1] && !p.images[2] && !p.images[3] && !p.images[4]) {
-                return toast.error(`Product ${i + 1}: Please upload at least one image`)
+        // Validate product info
+        if (!productName || !description || !category) {
+            return toast.error("Please fill product name, description and category")
+        }
+
+        // Validate variants
+        for (let i = 0; i < variants.length; i++) {
+            const v = variants[i]
+            const hasImages = v.images[1] || v.images[2] || v.images[3] || v.images[4]
+            if (!hasImages) {
+                return toast.error(`Variant ${i + 1}: Please upload at least one image`)
             }
-            if (!p.name || !p.description || !p.mrp || !p.price || !p.category) {
-                return toast.error(`Product ${i + 1}: Please fill all required fields`)
+            if (!v.mrp || !v.price) {
+                return toast.error(`Variant ${i + 1}: Please enter MRP and Price`)
             }
         }
 
         setLoading(true)
         const token = await getToken()
-        let successCount = 0
-        let failCount = 0
 
         try {
-            // Submit each product
-            for (let i = 0; i < products.length; i++) {
-                const p = products[i]
-                const formData = new FormData()
-                formData.append('name', p.name)
-                formData.append('description', p.description)
-                formData.append('mrp', p.mrp)
-                formData.append('price', p.price)
-                formData.append('category', p.category)
-                formData.append('colors', p.colors.join(','))
-                formData.append('sizes', p.sizes.join(','))
+            const formData = new FormData()
+            
+            formData.append('name', productName)
+            formData.append('description', description)
+            formData.append('gst', gst)
+            formData.append('category', category)
+            
+            // Prepare variants data (without images - they go separately)
+            const variantsForJson = variants.map(v => ({
+                name: v.name,
+                mrp: v.mrp,
+                price: v.price,
+                color: v.color,
+                colorHex: v.colorHex
+            }))
+            formData.append('variants', JSON.stringify(variantsForJson))
 
-                Object.keys(p.images).forEach((key) => {
-                    p.images[key] && formData.append('images', p.images[key])
+            // Append images for each variant
+            variants.forEach((v, index) => {
+                Object.keys(v.images).forEach((key) => {
+                    if (v.images[key]) {
+                        formData.append(`variant_${index}_images`, v.images[key])
+                    }
                 })
+            })
 
-                try {
-                    await axios.post('/api/store/product', formData, { headers: { Authorization: `Bearer ${token}` } })
-                    successCount++
-                } catch (error) {
-                    failCount++
-                    console.error(`Failed to add product ${i + 1}:`, error)
-                }
-            }
+            await axios.post('/api/store/product', formData, { 
+                headers: { Authorization: `Bearer ${token}` } 
+            })
 
-            if (successCount > 0) {
-                toast.success(`${successCount} product${successCount > 1 ? 's' : ''} added successfully!`)
-                setProducts([createEmptyProduct()])
-            }
-            if (failCount > 0) {
-                toast.error(`${failCount} product${failCount > 1 ? 's' : ''} failed to add`)
-            }
+            toast.success('Product added successfully!')
+            
+            // Reset form
+            setProductName("")
+            setDescription("")
+            setCategory("")
+            setGst(0)
+            setAiUsed(false)
+            setVariants([createEmptyVariant()])
+            
         } catch (error) {
             toast.error(error?.response?.data?.error || error.message)
         } finally {
@@ -174,205 +167,242 @@ export default function StoreAddProduct() {
     }
 
     return (
-        <form onSubmit={e => toast.promise(onSubmitHandler(e), { loading: `Adding ${products.length} Product${products.length > 1 ? 's' : ''}...` })} className="text-slate-500 mb-28">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl">Add New <span className="text-slate-800 font-medium">Products</span></h1>
-                <span className="text-sm bg-slate-100 px-3 py-1 rounded-full">{products.length} product{products.length > 1 ? 's' : ''}</span>
+        <form onSubmit={onSubmitHandler} className="text-slate-500 mb-28 max-w-4xl">
+            <div className="flex items-center gap-3 mb-2">
+                <Package className="text-slate-700" size={28} />
+                <h1 className="text-2xl">Add New <span className="text-slate-800 font-medium">Product</span></h1>
+            </div>
+            <p className="text-sm text-slate-400 mb-6">Create a single product with multiple variants (e.g., storage sizes, colors)</p>
+
+            {/* Product Info Section */}
+            <div className="p-6 border border-slate-200 rounded-lg bg-white shadow-sm">
+                <h2 className="text-lg font-medium text-slate-700 mb-1">Product Information</h2>
+                <p className="text-sm text-slate-400 mb-5">This info is shared across all variants</p>
+
+                {/* Name */}
+                <label className="flex flex-col gap-2 mb-5">
+                    <span>Product Name <span className="text-red-400">*</span></span>
+                    <input 
+                        type="text" 
+                        value={productName} 
+                        onChange={(e) => setProductName(e.target.value)}
+                        placeholder="e.g., iPhone 15, Cotton T-Shirt, Running Shoes" 
+                        className="w-full p-2.5 px-4 outline-none border border-slate-200 rounded focus:border-slate-400 transition" 
+                        required 
+                    />
+                </label>
+
+                {/* Description */}
+                <label className="flex flex-col gap-2 mb-5">
+                    <span>Description <span className="text-red-400">*</span></span>
+                    <textarea 
+                        value={description} 
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Enter product description" 
+                        rows={4} 
+                        className="w-full p-2.5 px-4 outline-none border border-slate-200 rounded resize-none focus:border-slate-400 transition" 
+                        required 
+                    />
+                </label>
+
+                {/* Category and GST */}
+                <div className="flex flex-wrap gap-5">
+                    <label className="flex flex-col gap-2 flex-1 min-w-[200px]">
+                        <span>Category <span className="text-red-400">*</span></span>
+                        <select 
+                            value={category} 
+                            onChange={(e) => setCategory(e.target.value)}
+                            className="w-full p-2.5 px-4 outline-none border border-slate-200 rounded focus:border-slate-400 transition" 
+                            required
+                        >
+                            <option value="">Select a category</option>
+                            {categories.map((cat) => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
+                    </label>
+                    <label className="flex flex-col gap-2">
+                        <span>GST (%)</span>
+                        <select 
+                            value={gst} 
+                            onChange={(e) => setGst(Number(e.target.value))}
+                            className="w-full p-2.5 px-4 outline-none border border-slate-200 rounded min-w-[120px] focus:border-slate-400 transition"
+                        >
+                            {gstOptions.map((g) => (
+                                <option key={g} value={g}>{g}%</option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
             </div>
 
-            {products.map((product, productIndex) => (
-                <div key={product.id} className="mt-8 p-6 border border-slate-200 rounded-lg relative">
-                    {/* Product Header */}
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-medium text-slate-700">Product {productIndex + 1}</h2>
-                        {products.length > 1 && (
-                            <button
-                                type="button"
-                                onClick={() => removeProduct(productIndex)}
-                                className="text-red-500 hover:text-red-600 transition p-1"
-                            >
-                                <Trash2 size={20} />
-                            </button>
-                        )}
-                    </div>
+            {/* Variants Section */}
+            <div className="mt-6 p-6 border border-slate-200 rounded-lg bg-white shadow-sm">
+                <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-lg font-medium text-slate-700">Product Variants</h2>
+                    <span className="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-medium">{variants.length} variant{variants.length > 1 ? 's' : ''}</span>
+                </div>
+                <p className="text-sm text-slate-400 mb-5">Add different options like 64GB, 128GB, 256GB or Small, Medium, Large</p>
 
-                    {/* Product Images */}
-                    <p className="mb-2">Product Images</p>
-                    <div className="flex gap-3">
-                        {Object.keys(product.images).map((key) => (
-                            <label key={key} htmlFor={`images-${product.id}-${key}`} className="cursor-pointer">
-                                <Image
-                                    width={300}
-                                    height={300}
-                                    className='h-15 w-auto border border-slate-200 rounded'
-                                    src={product.images[key] ? URL.createObjectURL(product.images[key]) : assets.upload_area}
-                                    alt=""
-                                />
-                                <input
-                                    type="file"
-                                    accept='image/*'
-                                    id={`images-${product.id}-${key}`}
-                                    onChange={e => handleImageUpload(productIndex, key, e.target.files[0])}
-                                    hidden
-                                />
-                            </label>
-                        ))}
-                    </div>
-
-                    {/* Name */}
-                    <label className="flex flex-col gap-2 my-6">
-                        Name
-                        <input 
-                            type="text" 
-                            value={product.name} 
-                            onChange={(e) => updateProduct(productIndex, 'name', e.target.value)}
-                            placeholder="Enter product name" 
-                            className="w-full max-w-sm p-2 px-4 outline-none border border-slate-200 rounded" 
-                            required 
-                        />
-                    </label>
-
-                    {/* Description */}
-                    <label className="flex flex-col gap-2 my-6">
-                        Description
-                        <textarea 
-                            value={product.description} 
-                            onChange={(e) => updateProduct(productIndex, 'description', e.target.value)}
-                            placeholder="Enter product description" 
-                            rows={4} 
-                            className="w-full max-w-sm p-2 px-4 outline-none border border-slate-200 rounded resize-none" 
-                            required 
-                        />
-                    </label>
-
-                    {/* Prices */}
-                    <div className="flex gap-5">
-                        <label className="flex flex-col gap-2">
-                            Actual Price ($)
-                            <input 
-                                type="number" 
-                                value={product.mrp} 
-                                onChange={(e) => updateProduct(productIndex, 'mrp', e.target.value)}
-                                placeholder="0" 
-                                className="w-full max-w-45 p-2 px-4 outline-none border border-slate-200 rounded" 
-                                required 
-                            />
-                        </label>
-                        <label className="flex flex-col gap-2">
-                            Offer Price ($)
-                            <input 
-                                type="number" 
-                                value={product.price} 
-                                onChange={(e) => updateProduct(productIndex, 'price', e.target.value)}
-                                placeholder="0" 
-                                className="w-full max-w-45 p-2 px-4 outline-none border border-slate-200 rounded" 
-                                required 
-                            />
-                        </label>
-                    </div>
-
-                    {/* Category */}
-                    <select 
-                        value={product.category} 
-                        onChange={(e) => updateProduct(productIndex, 'category', e.target.value)}
-                        className="w-full max-w-sm p-2 px-4 my-6 outline-none border border-slate-200 rounded" 
-                        required
-                    >
-                        <option value="">Select a category</option>
-                        {categories.map((category) => (
-                            <option key={category} value={category}>{category}</option>
-                        ))}
-                    </select>
-
-                    {/* Colors */}
-                    <div className="my-6">
-                        <p className="mb-2">Colors <span className="text-slate-400 text-sm">(Optional)</span></p>
-                        <div className="flex flex-wrap gap-2 max-w-sm">
-                            {availableColors.map((color) => (
+                {variants.map((variant, index) => (
+                    <div key={variant.id} className="mb-5 p-5 bg-gradient-to-br from-slate-50 to-white rounded-lg border border-slate-200">
+                        {/* Variant Header */}
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <span className="w-8 h-8 bg-slate-800 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                                    {index + 1}
+                                </span>
+                                <h3 className="font-medium text-slate-700">
+                                    {variant.name || `Variant ${index + 1}`}
+                                </h3>
+                            </div>
+                            {variants.length > 1 && (
                                 <button
                                     type="button"
-                                    key={color}
-                                    onClick={() => toggleColor(productIndex, color)}
-                                    className={`px-3 py-1 rounded border transition ${
-                                        product.colors.includes(color) 
-                                            ? 'bg-slate-800 text-white border-slate-800' 
-                                            : 'border-slate-200 hover:border-slate-400'
-                                    }`}
+                                    onClick={() => removeVariant(index)}
+                                    className="text-red-500 hover:text-red-600 hover:bg-red-50 p-2 rounded transition"
+                                    title="Remove variant"
                                 >
-                                    {color}
+                                    <Trash2 size={18} />
                                 </button>
-                            ))}
+                            )}
                         </div>
-                        {product.colors.length > 0 && (
-                            <p className="mt-2 text-sm text-slate-400">Selected: {product.colors.join(', ')}</p>
-                        )}
-                    </div>
 
-                    {/* Sizes */}
-                    <div className="my-6">
-                        <p className="mb-2">Sizes <span className="text-slate-400 text-sm">(Optional)</span></p>
-                        <div className="flex items-center gap-3 max-w-sm">
-                            <input 
-                                type="text" 
-                                value={product.sizeInput} 
-                                onChange={(e) => updateProduct(productIndex, 'sizeInput', e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault()
-                                        addSize(productIndex)
-                                    }
-                                }}
-                                placeholder="Enter size (e.g. XL, 42, 128GB)" 
-                                className="flex-1 p-2 px-4 outline-none border border-slate-200 rounded"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => addSize(productIndex)}
-                                className="p-2 bg-slate-800 text-white rounded hover:bg-slate-900 transition"
-                            >
-                                <Plus size={20} />
-                            </button>
+                        {/* Variant Name & Color */}
+                        <div className="flex flex-wrap gap-4 mb-4">
+                            <label className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
+                                <span className="text-sm text-slate-600">Variant Name <span className="text-slate-400">(e.g., 64GB, Large, Red)</span></span>
+                                <input 
+                                    type="text" 
+                                    value={variant.name} 
+                                    onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                                    placeholder="e.g., 128GB, XL, Blue" 
+                                    className="w-full p-2.5 px-3 outline-none border border-slate-200 rounded bg-white focus:border-slate-400 transition"
+                                />
+                            </label>
+                            <label className="flex flex-col gap-1.5">
+                                <span className="text-sm text-slate-600">Color <span className="text-slate-400">(Optional)</span></span>
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        type="text" 
+                                        value={variant.color} 
+                                        onChange={(e) => updateVariant(index, 'color', e.target.value)}
+                                        placeholder="Color name" 
+                                        className="w-28 p-2.5 px-3 outline-none border border-slate-200 rounded bg-white focus:border-slate-400 transition"
+                                    />
+                                    <input 
+                                        type="color" 
+                                        value={variant.colorHex}
+                                        onChange={(e) => updateVariant(index, 'colorHex', e.target.value)}
+                                        className="w-10 h-10 border border-slate-200 rounded cursor-pointer"
+                                        title="Pick color"
+                                    />
+                                </div>
+                            </label>
                         </div>
-                        {product.sizes.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                {product.sizes.map((size, sizeIndex) => (
-                                    <div 
-                                        key={sizeIndex} 
-                                        className="flex items-center gap-2 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full"
-                                    >
-                                        <span className="text-sm font-medium">{size}</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => removeSize(productIndex, sizeIndex)}
-                                            className="text-slate-400 hover:text-red-500 transition"
-                                        >
-                                            <X size={14} />
-                                        </button>
-                                    </div>
+
+                        {/* Prices */}
+                        <div className="flex flex-wrap gap-4 mb-4">
+                            <label className="flex flex-col gap-1.5">
+                                <span className="text-sm text-slate-600">MRP ($) <span className="text-red-400">*</span></span>
+                                <input 
+                                    type="number" 
+                                    value={variant.mrp} 
+                                    onChange={(e) => updateVariant(index, 'mrp', e.target.value)}
+                                    placeholder="0" 
+                                    className="w-28 p-2.5 px-3 outline-none border border-slate-200 rounded bg-white focus:border-slate-400 transition" 
+                                    required 
+                                />
+                            </label>
+                            <label className="flex flex-col gap-1.5">
+                                <span className="text-sm text-slate-600">Selling Price ($) <span className="text-red-400">*</span></span>
+                                <input 
+                                    type="number" 
+                                    value={variant.price} 
+                                    onChange={(e) => updateVariant(index, 'price', e.target.value)}
+                                    placeholder="0" 
+                                    className="w-28 p-2.5 px-3 outline-none border border-slate-200 rounded bg-white focus:border-slate-400 transition" 
+                                    required 
+                                />
+                            </label>
+                            {variant.mrp && variant.price && Number(variant.price) < Number(variant.mrp) && (
+                                <div className="flex items-end pb-2.5">
+                                    <span className="text-sm text-green-600 font-semibold bg-green-50 px-2 py-1 rounded">
+                                        {Math.round((1 - Number(variant.price) / Number(variant.mrp)) * 100)}% off
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Images */}
+                        <div>
+                            <p className="text-sm text-slate-600 mb-2">Product Images <span className="text-red-400">*</span></p>
+                            <div className="flex gap-3 flex-wrap">
+                                {Object.keys(variant.images).map((key) => (
+                                    <label key={key} htmlFor={`img-${variant.id}-${key}`} className="cursor-pointer group">
+                                        <div className="relative">
+                                            <Image
+                                                width={300}
+                                                height={300}
+                                                className='h-16 w-auto border border-slate-200 rounded bg-white group-hover:border-slate-400 transition'
+                                                src={variant.images[key] ? URL.createObjectURL(variant.images[key]) : assets.upload_area}
+                                                alt=""
+                                            />
+                                            {variant.images[key] && (
+                                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                                    <span className="text-white text-xs">✓</span>
+                                                </span>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept='image/*'
+                                            id={`img-${variant.id}-${key}`}
+                                            onChange={e => handleImageUpload(index, key, e.target.files[0])}
+                                            hidden
+                                        />
+                                    </label>
                                 ))}
                             </div>
-                        )}
+                            <p className="text-xs text-slate-400 mt-2">Upload up to 4 images for this variant</p>
+                        </div>
                     </div>
-                </div>
-            ))}
+                ))}
 
-            {/* Add Another Product Button */}
-            <button
-                type="button"
-                onClick={addProduct}
-                className="mt-6 w-full max-w-sm border-2 border-dashed border-slate-300 text-slate-500 p-4 rounded-lg hover:border-slate-400 hover:text-slate-600 transition flex items-center justify-center gap-2"
-            >
-                <Plus size={20} />
-                Add Another Product
-            </button>
+                {/* Add Variant Button */}
+                <button
+                    type="button"
+                    onClick={addVariant}
+                    className="w-full py-3.5 border-2 border-dashed border-slate-300 text-slate-500 rounded-lg hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition flex items-center justify-center gap-2 font-medium"
+                >
+                    <Plus size={20} />
+                    Add Another Variant
+                </button>
+            </div>
+
+            {/* Preview */}
+            {productName && variants.length > 0 && (
+                <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-sm font-medium text-slate-600 mb-3">Preview: How variants will appear on product page</p>
+                    <div className="flex flex-wrap gap-2">
+                        {variants.map((v, i) => (
+                            <div key={i} className={`px-4 py-2 rounded-lg text-sm border-2 ${i === 0 ? 'bg-slate-800 text-white border-slate-800' : 'bg-white border-slate-200 text-slate-600'}`}>
+                                {v.name || `Variant ${i + 1}`}
+                                {v.price && <span className="ml-2 opacity-75">${v.price}</span>}
+                            </div>
+                        ))}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-3">Users will be able to switch between these variants on the product page</p>
+                </div>
+            )}
 
             {/* Submit Button */}
             <div className="mt-8">
                 <button 
                     disabled={loading} 
-                    className="bg-slate-800 text-white px-8 py-3 hover:bg-slate-900 rounded transition disabled:opacity-50"
+                    className="bg-slate-800 text-white px-10 py-3.5 hover:bg-slate-900 rounded-lg transition disabled:opacity-50 font-medium"
                 >
-                    {loading ? 'Adding...' : `Add ${products.length} Product${products.length > 1 ? 's' : ''}`}
+                    {loading ? 'Adding Product...' : 'Add Product'}
                 </button>
             </div>
         </form>

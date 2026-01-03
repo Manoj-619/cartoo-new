@@ -1,21 +1,32 @@
 'use client'
-import { PackageIcon, Search, ShoppingCart } from "lucide-react";
+import { PackageIcon, Search, ShoppingCart, Heart } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useSelector } from "react-redux";
-import {useUser, useClerk, UserButton, Protect} from "@clerk/nextjs"
+import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import {useUser, useClerk, UserButton, Protect, useAuth} from "@clerk/nextjs"
 import { assets } from "@/assets/assets";
+import { fetchWishlist } from "@/lib/features/wishlist/wishlistSlice";
 
 const Navbar = () => {
 
     const {user} = useUser()
     const {openSignIn} = useClerk()
+    const { getToken, isSignedIn } = useAuth()
     const router = useRouter();
+    const dispatch = useDispatch()
 
     const [search, setSearch] = useState('')
     const cartCount = useSelector(state => state.cart.total)
+    const wishlistCount = useSelector(state => state.wishlist.productIds.length)
+
+    // Fetch wishlist when user signs in
+    useEffect(() => {
+        if (isSignedIn) {
+            dispatch(fetchWishlist({ getToken }))
+        }
+    }, [isSignedIn, dispatch, getToken])
 
     const handleSearch = (e) => {
         e.preventDefault()
@@ -49,6 +60,14 @@ const Navbar = () => {
                             <input className="w-full bg-transparent outline-none placeholder-slate-600" type="text" placeholder="Search products" value={search} onChange={(e) => setSearch(e.target.value)} required />
                         </form>
 
+                        <Link href="/wishlist" className="relative flex items-center gap-2 text-slate-600">
+                            <Heart size={18} />
+                            Wishlist
+                            {wishlistCount > 0 && (
+                                <span className="absolute -top-1 left-3 text-[8px] text-white bg-red-500 size-3.5 rounded-full flex items-center justify-center">{wishlistCount}</span>
+                            )}
+                        </Link>
+
                         <Link href="/cart" className="relative flex items-center gap-2 text-slate-600">
                             <ShoppingCart size={18} />
                             Cart
@@ -78,11 +97,8 @@ const Navbar = () => {
                             <div>
                             <UserButton>
                                 <UserButton.MenuItems>
+                                    <UserButton.Action labelIcon={<Heart size={16}/>} label="Wishlist" onClick={()=> router.push('/wishlist')}/>
                                     <UserButton.Action labelIcon={<ShoppingCart size={16}/>} label="Cart" onClick={()=> router.push('/cart')}/>
-                                </UserButton.MenuItems>
-                            </UserButton>
-                            <UserButton>
-                                <UserButton.MenuItems>
                                     <UserButton.Action labelIcon={<PackageIcon size={16}/>} label="My Orders" onClick={()=> router.push('/orders')}/>
                                 </UserButton.MenuItems>
                             </UserButton>

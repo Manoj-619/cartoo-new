@@ -5,7 +5,13 @@ import { MapPin, Mail, Phone } from "lucide-react"
 const StoreInfo = ({store}) => {
     return (
         <div className="flex-1 space-y-2 text-sm">
-            <Image width={100} height={100} src={store.logo} alt={store.name} className="max-w-20 max-h-20 object-contain shadow rounded-full max-sm:mx-auto" />
+            {store.logo ? (
+                <Image width={100} height={100} src={store.logo} alt={store.name} className="max-w-20 max-h-20 object-contain shadow rounded-full max-sm:mx-auto" />
+            ) : (
+                <div className="max-w-20 max-h-20 w-20 h-20 rounded-full shadow bg-slate-200 flex items-center justify-center text-slate-500 text-2xl font-semibold max-sm:mx-auto">
+                    {store.name?.charAt(0)?.toUpperCase() || 'S'}
+                </div>
+            )}
             <div className="flex flex-col sm:flex-row gap-3 items-center">
                 <h3 className="text-xl font-semibold text-slate-800"> {store.name} </h3>
                 <span className="text-sm">@{store.username}</span>
