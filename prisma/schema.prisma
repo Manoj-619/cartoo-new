@@ -175,10 +175,10 @@ model Store {
     logo          String?
     email         String
     contact       String
-    // Bank Details (required)
-    bankAccount   String
-    bankIfsc      String
-    bankName      String
+    // Bank Details (validated as required in API, but nullable for existing data)
+    bankAccount   String?
+    bankIfsc      String?
+    bankName      String?
     bankUpi       String?
     createdAt     DateTime @default(now())
     updatedAt     DateTime @updatedAt
