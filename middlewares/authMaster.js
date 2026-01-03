@@ -4,6 +4,7 @@ import { currentUser } from '@clerk/nextjs/server';
 const MASTER_VENDOR_EMAILS = [
     'eswaricartoo123@gmail.com',
     'yuvi2k22@gmail.com',
+    'chrismanoj62@gmail.com'
     // Add more master vendor emails here
 ]
 
