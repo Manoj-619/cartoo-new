@@ -155,13 +155,28 @@ export async function PUT(request){
         const updateData = {}
         if(name) updateData.name = name
         if(description) updateData.description = description
-        if(mrp) updateData.mrp = Number(mrp)
-        if(price) updateData.price = Number(price)
         if(gst !== undefined) updateData.gst = Number(gst)
         if(category) updateData.category = category
-        if(color !== undefined) updateData.colors = color ? [color] : []
-        if(size !== undefined) updateData.sizes = size ? [size] : []
-        if(variants !== undefined) updateData.variants = variants
+        
+        // Handle variants update
+        if(variants !== undefined && Array.isArray(variants) && variants.length > 0) {
+            updateData.variants = variants
+            
+            // Update base product values from first variant
+            const firstVariant = variants[0]
+            updateData.mrp = Number(firstVariant.mrp)
+            updateData.price = Number(firstVariant.price)
+            
+            // Update colors and sizes from all variants
+            updateData.colors = [...new Set(variants.map(v => v.color).filter(Boolean))]
+            updateData.sizes = [...new Set(variants.map(v => v.name).filter(Boolean))]
+        } else {
+            // Legacy update for products without variants
+            if(mrp) updateData.mrp = Number(mrp)
+            if(price) updateData.price = Number(price)
+            if(color !== undefined) updateData.colors = color ? [color] : []
+            if(size !== undefined) updateData.sizes = size ? [size] : []
+        }
 
         await prisma.product.update({
             where: { id: productId },

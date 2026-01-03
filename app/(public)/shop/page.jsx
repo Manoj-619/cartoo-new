@@ -4,16 +4,31 @@ import ProductCard from "@/components/ProductCard"
 import { MoveLeftIcon, SlidersHorizontal, X, ChevronDown } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSelector } from "react-redux"
+import Loading from "@/components/Loading"
 
 const categories = ['All', 'Electronics', 'Clothing', 'Home & Kitchen', 'Beauty & Health', 'Toys & Games', 'Sports & Outdoors', 'Books & Media', 'Food & Drink', 'Hobbies & Crafts', 'Others']
 
 const sortOptions = [
-    { label: 'Newest First', value: 'newest' },
+    { label: 'Recommended', value: 'recommended' },
     { label: 'Price: Low to High', value: 'price_asc' },
     { label: 'Price: High to Low', value: 'price_desc' },
     { label: 'Rating: High to Low', value: 'rating_desc' },
     { label: 'Name: A to Z', value: 'name_asc' },
 ]
+
+const PRIORITY_VENDOR_EMAIL = 'eswaricartoo123@gmail.com'
+
+// Skeleton loader for product cards
+const ProductCardSkeleton = () => (
+    <div className="animate-pulse">
+        <div className="bg-slate-200 h-40 sm:h-68 rounded-lg"></div>
+        <div className="mt-3 space-y-2">
+            <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+            <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+            <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+        </div>
+    </div>
+)
 
 function ShopContent() {
     const searchParams = useSearchParams()
@@ -21,12 +36,12 @@ function ShopContent() {
     const router = useRouter()
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
 
-    const products = useSelector(state => state.product.list)
+    const { list: products, loading, error } = useSelector(state => state.product)
 
     // Filter states
     const [selectedCategory, setSelectedCategory] = useState('All')
     const [priceRange, setPriceRange] = useState({ min: '', max: '' })
-    const [sortBy, setSortBy] = useState('newest')
+    const [sortBy, setSortBy] = useState('recommended')
     const [showFilters, setShowFilters] = useState(false)
 
     // Calculate max price for reference
@@ -77,9 +92,20 @@ function ShopContent() {
             case 'name_asc':
                 result.sort((a, b) => a.name.localeCompare(b.name))
                 break
-            case 'newest':
+            case 'recommended':
             default:
-                result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                // Prioritize products from priority vendor, then sort by creation date
+                result.sort((a, b) => {
+                    const aIsPriority = a.store?.email === PRIORITY_VENDOR_EMAIL
+                    const bIsPriority = b.store?.email === PRIORITY_VENDOR_EMAIL
+                    
+                    // Priority vendor products come first
+                    if (aIsPriority && !bIsPriority) return -1
+                    if (!aIsPriority && bIsPriority) return 1
+                    
+                    // Within same priority level, sort by creation date (newest first)
+                    return new Date(b.createdAt) - new Date(a.createdAt)
+                })
                 break
         }
 
@@ -89,10 +115,26 @@ function ShopContent() {
     const clearFilters = () => {
         setSelectedCategory('All')
         setPriceRange({ min: '', max: '' })
-        setSortBy('newest')
+        setSortBy('recommended')
     }
 
-    const hasActiveFilters = selectedCategory !== 'All' || priceRange.min !== '' || priceRange.max !== '' || sortBy !== 'newest'
+    const hasActiveFilters = selectedCategory !== 'All' || priceRange.min !== '' || priceRange.max !== '' || sortBy !== 'recommended'
+
+    // Show error state
+    if (error) {
+        return (
+            <div className="min-h-[70vh] flex flex-col items-center justify-center">
+                <p className="text-red-500 text-lg mb-2">Failed to load products</p>
+                <p className="text-slate-400 text-sm">{error}</p>
+                <button 
+                    onClick={() => window.location.reload()}
+                    className="mt-4 px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition"
+                >
+                    Try Again
+                </button>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-[70vh] mx-6">
@@ -102,7 +144,9 @@ function ShopContent() {
                     <h1 onClick={() => router.push('/shop')} className="text-2xl text-slate-500 flex items-center gap-2 cursor-pointer">
                         {search && <MoveLeftIcon size={20} />}
                         All <span className="text-slate-700 font-medium">Products</span>
-                        <span className="text-sm font-normal text-slate-400">({filteredProducts.length} items)</span>
+                        {!loading && (
+                            <span className="text-sm font-normal text-slate-400">({filteredProducts.length} items)</span>
+                        )}
                     </h1>
                     
                     {/* Mobile Filter Toggle */}
@@ -172,7 +216,9 @@ function ShopContent() {
                             <div className="mb-6">
                                 <label className="block text-sm font-medium text-slate-700 mb-2">
                                     Price Range
-                                    <span className="font-normal text-slate-400 ml-1">(max: {currency}{maxProductPrice.toFixed(0)})</span>
+                                    {!loading && maxProductPrice > 0 && (
+                                        <span className="font-normal text-slate-400 ml-1">(max: {currency}{maxProductPrice.toFixed(0)})</span>
+                                    )}
                                 </label>
                                 <div className="flex items-center gap-2">
                                     <input
@@ -212,10 +258,10 @@ function ShopContent() {
                                                 <X size={12} className="cursor-pointer" onClick={() => setPriceRange({ min: '', max: '' })} />
                                             </span>
                                         )}
-                                        {sortBy !== 'newest' && (
+                                        {sortBy !== 'recommended' && (
                                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">
                                                 {sortOptions.find(o => o.value === sortBy)?.label}
-                                                <X size={12} className="cursor-pointer" onClick={() => setSortBy('newest')} />
+                                                <X size={12} className="cursor-pointer" onClick={() => setSortBy('recommended')} />
                                             </span>
                                         )}
                                     </div>
@@ -234,7 +280,14 @@ function ShopContent() {
 
                     {/* Products Grid */}
                     <div className="flex-1">
-                        {filteredProducts.length > 0 ? (
+                        {loading ? (
+                            // Skeleton loader grid
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 xl:gap-6 mb-32">
+                                {[...Array(8)].map((_, i) => (
+                                    <ProductCardSkeleton key={i} />
+                                ))}
+                            </div>
+                        ) : filteredProducts.length > 0 ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 xl:gap-6 mb-32">
                                 {filteredProducts.map((product) => (
                                     <ProductCard key={product.id} product={product} />
@@ -261,7 +314,7 @@ function ShopContent() {
 
 export default function Shop() {
     return (
-        <Suspense fallback={<div className="min-h-[70vh] flex items-center justify-center">Loading shop...</div>}>
+        <Suspense fallback={<Loading />}>
             <ShopContent />
         </Suspense>
     );

@@ -34,8 +34,8 @@ const Footer = () => {
         {
             title: "CONTACT",
             links: [
-                { text: "+91 9363391255", path: '/', icon: MailIcon },
-                { text: "cartoobusiness@gmail.com", path: '/', icon: PhoneIcon },
+                { text: "+91 6381550266", path: 'tel:+916381550266', icon: PhoneIcon },
+                { text: "cartoobusiness@gmail.com", path: 'mailto:cartoobusiness@gmail.com', icon: MailIcon },
                 { text: "Rajapalaym, 626102", path: '/', icon: MapPinIcon }
             ]
         }

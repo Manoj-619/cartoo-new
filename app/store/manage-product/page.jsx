@@ -5,7 +5,8 @@ import Image from "next/image"
 import Loading from "@/components/Loading"
 import { useAuth, useUser } from "@clerk/nextjs"
 import axios from "axios"
-import { Pencil, Trash2, X, Layers } from "lucide-react"
+import { Pencil, Trash2, X, Layers, Plus, Upload, XCircle } from "lucide-react"
+import { assets } from "@/assets/assets"
 
 const categories = ['Electronics', 'Clothing', 'Home & Kitchen', 'Beauty & Health', 'Toys & Games', 'Sports & Outdoors', 'Books & Media', 'Food & Drink', 'Hobbies & Crafts', 'Others']
 const gstOptions = [0, 5, 18, 40]
@@ -18,6 +19,7 @@ export default function StoreManageProducts() {
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
 
     const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
     const [products, setProducts] = useState([])
     
     // Edit modal state
@@ -26,12 +28,9 @@ export default function StoreManageProducts() {
     const [editForm, setEditForm] = useState({
         name: '',
         description: '',
-        mrp: 0,
-        price: 0,
         gst: 0,
         category: '',
-        color: '',
-        size: ''
+        variants: []
     })
 
     // Delete confirmation state
@@ -81,46 +80,169 @@ export default function StoreManageProducts() {
 
     const openEditModal = (product) => {
         setEditingProduct(product)
+        
+        // Parse variants or create default from base product
+        let variants = []
+        if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+            variants = product.variants.map(v => ({
+                name: v.name || '',
+                color: v.color || '',
+                colorHex: v.colorHex || '#000000',
+                mrp: v.mrp || product.mrp,
+                price: v.price || product.price,
+                existingImages: v.images || [], // URLs of existing images
+                newImages: [] // New files to upload
+            }))
+        } else {
+            // Create a single variant from base product data
+            variants = [{
+                name: '',
+                color: product.colors?.[0] || '',
+                colorHex: '#000000',
+                mrp: product.mrp,
+                price: product.price,
+                existingImages: product.images || [],
+                newImages: []
+            }]
+        }
+        
         setEditForm({
             name: product.name,
             description: product.description,
-            mrp: product.mrp,
-            price: product.price,
             gst: product.gst || 0,
             category: product.category,
-            color: product.colors?.[0] || '',
-            size: product.sizes?.[0] || ''
+            variants: variants
         })
         setShowEditModal(true)
     }
 
+    const updateVariant = (index, field, value) => {
+        setEditForm(prev => ({
+            ...prev,
+            variants: prev.variants.map((v, i) => i === index ? { ...v, [field]: value } : v)
+        }))
+    }
+
+    const addVariant = () => {
+        const lastVariant = editForm.variants[editForm.variants.length - 1]
+        setEditForm(prev => ({
+            ...prev,
+            variants: [...prev.variants, {
+                name: '',
+                color: '',
+                colorHex: '#000000',
+                mrp: lastVariant?.mrp || 0,
+                price: lastVariant?.price || 0,
+                existingImages: [],
+                newImages: []
+            }]
+        }))
+    }
+
+    const removeVariant = (index) => {
+        if (editForm.variants.length > 1) {
+            setEditForm(prev => ({
+                ...prev,
+                variants: prev.variants.filter((_, i) => i !== index)
+            }))
+        }
+    }
+
+    const handleNewImageUpload = (variantIndex, files) => {
+        const fileArray = Array.from(files)
+        setEditForm(prev => ({
+            ...prev,
+            variants: prev.variants.map((v, i) => 
+                i === variantIndex 
+                    ? { ...v, newImages: [...v.newImages, ...fileArray] }
+                    : v
+            )
+        }))
+    }
+
+    const removeExistingImage = (variantIndex, imageIndex) => {
+        setEditForm(prev => ({
+            ...prev,
+            variants: prev.variants.map((v, i) => 
+                i === variantIndex 
+                    ? { ...v, existingImages: v.existingImages.filter((_, idx) => idx !== imageIndex) }
+                    : v
+            )
+        }))
+    }
+
+    const removeNewImage = (variantIndex, imageIndex) => {
+        setEditForm(prev => ({
+            ...prev,
+            variants: prev.variants.map((v, i) => 
+                i === variantIndex 
+                    ? { ...v, newImages: v.newImages.filter((_, idx) => idx !== imageIndex) }
+                    : v
+            )
+        }))
+    }
+
     const handleEditSubmit = async (e) => {
         e.preventDefault()
+        
+        // Validate variants
+        for (let i = 0; i < editForm.variants.length; i++) {
+            const v = editForm.variants[i]
+            if (!v.mrp || !v.price) {
+                toast.error(`Variant ${i + 1}: Please enter MRP and Price`)
+                return
+            }
+            // Check if variant has at least one image (existing or new)
+            if (v.existingImages.length === 0 && v.newImages.length === 0) {
+                toast.error(`Variant ${i + 1}: Please add at least one image`)
+                return
+            }
+        }
+        
+        setSaving(true)
+        
         try {
             const token = await getToken()
-            const { data } = await axios.put('/api/store/product', {
-                productId: editingProduct.id,
-                ...editForm
-            }, { headers: { Authorization: `Bearer ${token}` } })
+            const formData = new FormData()
             
-            // Update local state
-            setProducts(prevProducts => prevProducts.map(product => 
-                product.id === editingProduct.id 
-                    ? { 
-                        ...product, 
-                        ...editForm,
-                        gst: Number(editForm.gst),
-                        colors: editForm.color ? [editForm.color] : [],
-                        sizes: editForm.size ? [editForm.size] : []
-                    } 
-                    : product
-            ))
+            formData.append('productId', editingProduct.id)
+            formData.append('name', editForm.name)
+            formData.append('description', editForm.description)
+            formData.append('gst', editForm.gst)
+            formData.append('category', editForm.category)
+            
+            // Prepare variants data (with existing images info)
+            const variantsForJson = editForm.variants.map(v => ({
+                name: v.name,
+                color: v.color,
+                colorHex: v.colorHex,
+                mrp: v.mrp,
+                price: v.price,
+                existingImages: v.existingImages
+            }))
+            formData.append('variants', JSON.stringify(variantsForJson))
+
+            // Append new images for each variant
+            editForm.variants.forEach((v, index) => {
+                v.newImages.forEach((file) => {
+                    formData.append(`variant_${index}_new_images`, file)
+                })
+            })
+
+            const { data } = await axios.put('/api/store/product/update', formData, { 
+                headers: { Authorization: `Bearer ${token}` } 
+            })
+            
+            // Refresh products list
+            await fetchProducts()
             
             toast.success(data.message)
             setShowEditModal(false)
             setEditingProduct(null)
         } catch (error) {
             toast.error(error?.response?.data?.error || error.message)
+        } finally {
+            setSaving(false)
         }
     }
 
@@ -227,116 +349,241 @@ export default function StoreManageProducts() {
             {/* Edit Modal */}
             {showEditModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-medium text-slate-800">Edit Product</h2>
                             <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
                                 <X size={24} />
                             </button>
                         </div>
-                        
-                        {/* Show variants info */}
-                        {editingProduct?.variants && Array.isArray(editingProduct.variants) && editingProduct.variants.length > 0 && (
-                            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                                <p className="text-sm font-medium text-blue-700 mb-2">
-                                    <Layers size={14} className="inline mr-1" />
-                                    This product has {editingProduct.variants.length} variant{editingProduct.variants.length > 1 ? 's' : ''}:
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                    {editingProduct.variants.map((variant, idx) => (
-                                        <span key={idx} className="text-xs bg-white px-2 py-1 rounded border border-blue-200 text-blue-600">
-                                            {variant.name || `Variant ${idx + 1}`} - {currency}{variant.price}
-                                        </span>
+
+                        <form onSubmit={handleEditSubmit}>
+                            {/* Product Info Section */}
+                            <div className="mb-6 p-4 bg-slate-50 rounded-lg">
+                                <h3 className="text-sm font-medium text-slate-700 mb-3">Product Information</h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm text-slate-600 mb-1">Name</label>
+                                        <input 
+                                            type="text" 
+                                            value={editForm.name}
+                                            onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                                            className="w-full p-2 border border-slate-200 rounded outline-slate-400"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-slate-600 mb-1">Description</label>
+                                        <textarea 
+                                            value={editForm.description}
+                                            onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                                            rows={3}
+                                            className="w-full p-2 border border-slate-200 rounded outline-slate-400 resize-none"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="flex-1">
+                                            <label className="block text-sm text-slate-600 mb-1">Category</label>
+                                            <select 
+                                                value={editForm.category}
+                                                onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                                                className="w-full p-2 border border-slate-200 rounded outline-slate-400"
+                                                required
+                                            >
+                                                <option value="">Select category</option>
+                                                {categories.map(cat => (
+                                                    <option key={cat} value={cat}>{cat}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-slate-600 mb-1">GST (%)</label>
+                                            <select 
+                                                value={editForm.gst}
+                                                onChange={(e) => setEditForm({...editForm, gst: Number(e.target.value)})}
+                                                className="w-full p-2 border border-slate-200 rounded outline-slate-400 min-w-[100px]"
+                                            >
+                                                {gstOptions.map(gst => (
+                                                    <option key={gst} value={gst}>{gst}%</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Variants Section */}
+                            <div className="mb-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-sm font-medium text-slate-700">
+                                        <Layers size={14} className="inline mr-1" />
+                                        Variants ({editForm.variants.length})
+                                    </h3>
+                                </div>
+                                
+                                <div className="space-y-3">
+                                    {editForm.variants.map((variant, index) => (
+                                        <div key={index} className="p-4 border border-slate-200 rounded-lg bg-white">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <span className="text-sm font-medium text-slate-600">
+                                                    Variant {index + 1}
+                                                    {variant.name && <span className="text-slate-400 ml-1">— {variant.name}</span>}
+                                                </span>
+                                                {editForm.variants.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeVariant(index)}
+                                                        className="text-red-500 hover:text-red-600 p-1"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                                                <div className="col-span-2 sm:col-span-1">
+                                                    <label className="block text-xs text-slate-500 mb-1">Variant Name</label>
+                                                    <input 
+                                                        type="text"
+                                                        value={variant.name}
+                                                        onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                                                        placeholder="e.g., 64GB"
+                                                        className="w-full p-2 text-sm border border-slate-200 rounded outline-slate-400"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-slate-500 mb-1">Color</label>
+                                                    <div className="flex gap-1">
+                                                        <input 
+                                                            type="text"
+                                                            value={variant.color}
+                                                            onChange={(e) => updateVariant(index, 'color', e.target.value)}
+                                                            placeholder="Color"
+                                                            className="w-full p-2 text-sm border border-slate-200 rounded outline-slate-400"
+                                                        />
+                                                        <input 
+                                                            type="color"
+                                                            value={variant.colorHex}
+                                                            onChange={(e) => updateVariant(index, 'colorHex', e.target.value)}
+                                                            className="w-9 h-9 border border-slate-200 rounded cursor-pointer"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-slate-500 mb-1">MRP ({currency})</label>
+                                                    <input 
+                                                        type="number"
+                                                        value={variant.mrp}
+                                                        onChange={(e) => updateVariant(index, 'mrp', e.target.value)}
+                                                        className="w-full p-2 text-sm border border-slate-200 rounded outline-slate-400"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-slate-500 mb-1">Price ({currency})</label>
+                                                    <input 
+                                                        type="number"
+                                                        value={variant.price}
+                                                        onChange={(e) => updateVariant(index, 'price', e.target.value)}
+                                                        className="w-full p-2 text-sm border border-slate-200 rounded outline-slate-400"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Images Section */}
+                                            <div>
+                                                <label className="block text-xs text-slate-500 mb-2">Images</label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {/* Existing Images */}
+                                                    {variant.existingImages.map((img, imgIdx) => (
+                                                        <div key={`existing-${imgIdx}`} className="relative group">
+                                                            <Image 
+                                                                src={img} 
+                                                                alt="" 
+                                                                width={60} 
+                                                                height={60} 
+                                                                className="w-14 h-14 object-cover rounded border border-slate-200"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeExistingImage(index, imgIdx)}
+                                                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
+                                                                title="Remove image"
+                                                            >
+                                                                <X size={12} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    
+                                                    {/* New Images (previews) */}
+                                                    {variant.newImages.map((file, imgIdx) => (
+                                                        <div key={`new-${imgIdx}`} className="relative group">
+                                                            <Image 
+                                                                src={URL.createObjectURL(file)} 
+                                                                alt="" 
+                                                                width={60} 
+                                                                height={60} 
+                                                                className="w-14 h-14 object-cover rounded border-2 border-green-400"
+                                                            />
+                                                            <span className="absolute bottom-0 left-0 right-0 bg-green-500 text-white text-[8px] text-center">NEW</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeNewImage(index, imgIdx)}
+                                                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition"
+                                                                title="Remove image"
+                                                            >
+                                                                <X size={12} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    
+                                                    {/* Add Image Button */}
+                                                    <label className="w-14 h-14 border-2 border-dashed border-slate-300 rounded flex items-center justify-center cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition">
+                                                        <Upload size={18} className="text-slate-400" />
+                                                        <input 
+                                                            type="file"
+                                                            accept="image/*"
+                                                            multiple
+                                                            onChange={(e) => handleNewImageUpload(index, e.target.files)}
+                                                            className="hidden"
+                                                        />
+                                                    </label>
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 mt-1">
+                                                    {variant.existingImages.length + variant.newImages.length} image(s) • Click ✕ to remove
+                                                </p>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
-                                <p className="text-xs text-blue-500 mt-2">Note: Variant prices can be edited individually through the add product page</p>
+                                
+                                <button
+                                    type="button"
+                                    onClick={addVariant}
+                                    className="w-full mt-3 py-2 border-2 border-dashed border-slate-300 text-slate-500 rounded-lg hover:border-slate-400 hover:text-slate-600 transition flex items-center justify-center gap-2 text-sm"
+                                >
+                                    <Plus size={16} />
+                                    Add Variant
+                                </button>
                             </div>
-                        )}
-
-                        <form onSubmit={e => toast.promise(handleEditSubmit(e), { loading: "Updating product..." })}>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm text-slate-600 mb-1">Name</label>
-                                    <input 
-                                        type="text" 
-                                        value={editForm.name}
-                                        onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                                        className="w-full p-2 border border-slate-200 rounded outline-slate-400"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-slate-600 mb-1">Description</label>
-                                    <textarea 
-                                        value={editForm.description}
-                                        onChange={(e) => setEditForm({...editForm, description: e.target.value})}
-                                        rows={3}
-                                        className="w-full p-2 border border-slate-200 rounded outline-slate-400 resize-none"
-                                        required
-                                    />
-                                </div>
-                                <div className="flex gap-4">
-                                    <div className="flex-1">
-                                        <label className="block text-sm text-slate-600 mb-1">Base MRP ({currency})</label>
-                                        <input 
-                                            type="number" 
-                                            value={editForm.mrp}
-                                            onChange={(e) => setEditForm({...editForm, mrp: e.target.value})}
-                                            className="w-full p-2 border border-slate-200 rounded outline-slate-400"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="block text-sm text-slate-600 mb-1">Base Price ({currency})</label>
-                                        <input 
-                                            type="number" 
-                                            value={editForm.price}
-                                            onChange={(e) => setEditForm({...editForm, price: e.target.value})}
-                                            className="w-full p-2 border border-slate-200 rounded outline-slate-400"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-slate-600 mb-1">GST (%)</label>
-                                    <select 
-                                        value={editForm.gst}
-                                        onChange={(e) => setEditForm({...editForm, gst: Number(e.target.value)})}
-                                        className="w-full p-2 border border-slate-200 rounded outline-slate-400"
-                                    >
-                                        {gstOptions.map(gst => (
-                                            <option key={gst} value={gst}>{gst}%</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-slate-600 mb-1">Category</label>
-                                    <select 
-                                        value={editForm.category}
-                                        onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                                        className="w-full p-2 border border-slate-200 rounded outline-slate-400"
-                                        required
-                                    >
-                                        <option value="">Select category</option>
-                                        {categories.map(cat => (
-                                            <option key={cat} value={cat}>{cat}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+                            
                             <div className="flex gap-3 mt-6">
                                 <button 
                                     type="button"
                                     onClick={() => setShowEditModal(false)}
-                                    className="flex-1 py-2 border border-slate-300 text-slate-600 rounded hover:bg-slate-50 transition"
+                                    disabled={saving}
+                                    className="flex-1 py-2 border border-slate-300 text-slate-600 rounded hover:bg-slate-50 transition disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
                                 <button 
                                     type="submit"
-                                    className="flex-1 py-2 bg-slate-800 text-white rounded hover:bg-slate-900 transition"
+                                    disabled={saving}
+                                    className="flex-1 py-2 bg-slate-800 text-white rounded hover:bg-slate-900 transition disabled:opacity-50"
                                 >
-                                    Save Changes
+                                    {saving ? 'Saving...' : 'Save Changes'}
                                 </button>
                             </div>
                         </form>
