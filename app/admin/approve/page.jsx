@@ -1,7 +1,7 @@
 'use client'
 import { storesDummyData } from "@/assets/assets"
 import StoreInfo from "@/components/admin/StoreInfo"
-import Loading from "@/components/Loading"
+import ContentLoader from "@/components/ContentLoader"
 import { useAuth, useUser } from "@clerk/nextjs"
 import axios from "axios"
 import { useEffect, useState } from "react"
@@ -77,5 +77,5 @@ export default function AdminApprove() {
                 </div>
             )}
         </div>
-    ) : <Loading />
+    ) : <ContentLoader />
 }

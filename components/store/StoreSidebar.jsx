@@ -1,6 +1,6 @@
 'use client'
 import { usePathname } from "next/navigation"
-import { HomeIcon, LayoutListIcon, SquarePenIcon, SquarePlusIcon } from "lucide-react"
+import { HomeIcon, LayoutListIcon, SquarePenIcon, SquarePlusIcon, ExternalLink } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -38,6 +38,17 @@ const StoreSidebar = ({storeInfo}) => {
                         </Link>
                     ))
                 }
+            </div>
+
+            {/* Go to Store Button */}
+            <div className="mt-auto p-4 border-t border-slate-100">
+                <Link 
+                    href="/" 
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition"
+                >
+                    <ExternalLink size={16} />
+                    <span className="max-sm:hidden">Go to Store</span>
+                </Link>
             </div>
         </div>
     )

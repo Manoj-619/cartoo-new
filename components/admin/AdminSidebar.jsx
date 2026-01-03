@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from "next/navigation"
-import { HomeIcon, ShieldCheckIcon, StoreIcon, TicketPercentIcon } from "lucide-react"
+import { HomeIcon, ShieldCheckIcon, StoreIcon, TicketPercentIcon, ExternalLink, Megaphone } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { assets } from "@/assets/assets"
@@ -17,7 +17,8 @@ const AdminSidebar = () => {
         { name: 'Dashboard', href: '/admin', icon: HomeIcon },
         { name: 'Stores', href: '/admin/stores', icon: StoreIcon },
         { name: 'Approve Store', href: '/admin/approve', icon: ShieldCheckIcon },
-        { name: 'Coupons', href: '/admin/coupons', icon: TicketPercentIcon  },
+        { name: 'Coupons', href: '/admin/coupons', icon: TicketPercentIcon },
+        { name: 'Content', href: '/admin/banner', icon: Megaphone },
     ]
 
     return user && (
@@ -37,6 +38,17 @@ const AdminSidebar = () => {
                         </Link>
                     ))
                 }
+            </div>
+
+            {/* Go to Store Button */}
+            <div className="mt-auto p-4 border-t border-slate-100">
+                <Link 
+                    href="/" 
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition"
+                >
+                    <ExternalLink size={16} />
+                    <span className="max-sm:hidden">Go to Store</span>
+                </Link>
             </div>
         </div>
     )

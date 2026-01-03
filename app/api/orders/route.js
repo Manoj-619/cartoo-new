@@ -186,18 +186,14 @@ export async function POST(request) {
     }
 }
 
-// Get all orders for a user
+// Get all paid orders for a user
 export async function GET(request) {
     try {
         const { userId } = getAuth(request)
         const orders = await prisma.order.findMany({
             where: {
                 userId,
-                OR: [
-                    { paymentMethod: PaymentMethod.COD },
-                    { AND: [{ paymentMethod: PaymentMethod.STRIPE }, { isPaid: true }] },
-                    { AND: [{ paymentMethod: PaymentMethod.RAZORPAY }, { isPaid: true }] }
-                ]
+                isPaid: true
             },
             include: {
                 orderItems: { include: { product: true } },

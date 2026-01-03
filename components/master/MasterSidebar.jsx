@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from "next/navigation"
-import { HomeIcon, StoreIcon, Package, ShoppingCart, Plus, UserPlus, ShieldCheck, Receipt } from "lucide-react"
+import { HomeIcon, StoreIcon, Package, ShoppingCart, Plus, UserPlus, ShieldCheck, Receipt, ExternalLink } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useUser } from "@clerk/nextjs"
@@ -93,6 +93,17 @@ const MasterSidebar = ({ selectedStore, pendingCount = 0 }) => {
                     ))}
                 </div>
             )}
+
+            {/* Go to Store Button */}
+            <div className="mt-auto p-4 border-t border-slate-100">
+                <Link 
+                    href="/" 
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition"
+                >
+                    <ExternalLink size={16} />
+                    <span className="max-sm:hidden">Go to Store</span>
+                </Link>
+            </div>
         </div>
     )
 }

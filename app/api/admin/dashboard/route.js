@@ -15,12 +15,13 @@ export async function GET(request){
             return NextResponse.json({ error: 'not authorized' }, { status: 401 });
         }
 
-    // Get total orders
-    const orders = await prisma.order.count()
+    // Get total paid orders
+    const orders = await prisma.order.count({ where: { isPaid: true } })
     // Get total stores on app
     const stores = await prisma.store.count()
-    // get all orders include only createdAt and total & calculate total revenue
+    // get all paid orders include only createdAt and total & calculate total revenue
     const allOrders = await prisma.order.findMany({
+        where: { isPaid: true },
         select: {
             createdAt: true,
             total: true,

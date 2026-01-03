@@ -3,11 +3,11 @@ import { useEffect, useState, useMemo } from "react"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 import { 
-    Package, Truck, CheckCircle, Clock, X, 
+    Package, Truck, Clock, X, CheckCircle,
     TrendingUp, IndianRupee, Store as StoreIcon, Search
 } from "lucide-react"
 import Image from "next/image"
-import Loading from "@/components/Loading"
+import ContentLoader from "@/components/ContentLoader"
 import { toast } from "react-hot-toast"
 
 const statusOptions = [
@@ -105,7 +105,7 @@ export default function MasterAllOrders() {
         return vendorBreakdown.find(v => v.store?.id === filterStore)
     }, [filterStore, vendorBreakdown])
 
-    if (loading) return <Loading />
+    if (loading) return <ContentLoader />
 
     return (
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -116,7 +116,7 @@ export default function MasterAllOrders() {
             </div>
 
             {/* Financial Summary Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-8">
                 <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="p-2 sm:p-2.5 bg-purple-100 rounded-lg">
@@ -134,36 +134,6 @@ export default function MasterAllOrders() {
 
                 <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 sm:p-2.5 bg-green-100 rounded-lg">
-                            <CheckCircle size={20} className="text-green-600" />
-                        </div>
-                        <p className="text-xs sm:text-sm text-slate-500">Delivered</p>
-                    </div>
-                    <p className="text-xl sm:text-2xl font-bold text-green-600">
-                        {currency}{(financials.deliveredRevenue || 0).toFixed(2)}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1.5">
-                        {financials.deliveredOrders || 0} orders delivered
-                    </p>
-                </div>
-
-                <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 sm:p-2.5 bg-orange-100 rounded-lg">
-                            <Truck size={20} className="text-orange-600" />
-                        </div>
-                        <p className="text-xs sm:text-sm text-slate-500">In Transit</p>
-                    </div>
-                    <p className="text-xl sm:text-2xl font-bold text-orange-600">
-                        {financials.shippedOrders || 0}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1.5">
-                        Orders shipped
-                    </p>
-                </div>
-
-                <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5">
-                    <div className="flex items-center gap-3 mb-3">
                         <div className="p-2 sm:p-2.5 bg-blue-100 rounded-lg">
                             <IndianRupee size={20} className="text-blue-600" />
                         </div>
@@ -176,25 +146,20 @@ export default function MasterAllOrders() {
                         Tax amount
                     </p>
                 </div>
-            </div>
 
-            {/* Secondary Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8">
-                <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 sm:p-5 text-white">
-                    <p className="text-xs sm:text-sm opacity-80">Average Order Value</p>
-                    <p className="text-lg sm:text-xl font-bold mt-1.5">{currency}{(financials.averageOrderValue || 0).toFixed(2)}</p>
-                </div>
-                <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-4 sm:p-5 text-white">
-                    <p className="text-xs sm:text-sm opacity-80">Delivered Orders</p>
-                    <p className="text-lg sm:text-xl font-bold mt-1.5">{financials.deliveredOrders || 0}</p>
-                </div>
-                <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 sm:p-5 text-white">
-                    <p className="text-xs sm:text-sm opacity-80">Processing</p>
-                    <p className="text-lg sm:text-xl font-bold mt-1.5">{financials.processingOrders || 0}</p>
-                </div>
-                <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-4 sm:p-5 text-white">
-                    <p className="text-xs sm:text-sm opacity-80">Subtotal (excl. GST)</p>
-                    <p className="text-lg sm:text-xl font-bold mt-1.5">{currency}{(financials.totalSubtotal || 0).toFixed(2)}</p>
+                <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 sm:p-2.5 bg-green-100 rounded-lg">
+                            <Truck size={20} className="text-green-600" />
+                        </div>
+                        <p className="text-xs sm:text-sm text-slate-500">Shipping Charges</p>
+                    </div>
+                    <p className="text-xl sm:text-2xl font-bold text-green-600">
+                        {currency}{(financials.totalShipping || 0).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1.5">
+                        Delivery fees
+                    </p>
                 </div>
             </div>
 
@@ -602,6 +567,6 @@ export default function MasterAllOrders() {
                     </div>
                 </div>
             )}
-        </div>
+            </div>
     )
 }

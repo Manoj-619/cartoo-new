@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
 import Image from "next/image"
-import Loading from "@/components/Loading"
+import ContentLoader from "@/components/ContentLoader"
 import { useAuth, useUser } from "@clerk/nextjs"
 import axios from "axios"
 import { Pencil, Trash2, X, Layers, Plus, Upload, XCircle } from "lucide-react"
@@ -275,7 +275,7 @@ export default function StoreManageProducts() {
         }  
     }, [user])
 
-    if (loading) return <Loading />
+    if (loading) return <ContentLoader />
 
     return (
         <>

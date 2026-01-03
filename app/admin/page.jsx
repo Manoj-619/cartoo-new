@@ -1,6 +1,6 @@
 'use client'
 import { dummyAdminDashboardData } from "@/assets/assets"
-import Loading from "@/components/Loading"
+import ContentLoader from "@/components/ContentLoader"
 import OrdersAreaChart from "@/components/OrdersAreaChart"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
         fetchDashboardData()
     }, [])
 
-    if (loading) return <Loading />
+    if (loading) return <ContentLoader />
 
     return (
         <div className="text-slate-500">

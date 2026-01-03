@@ -1,6 +1,6 @@
 'use client'
 import { dummyStoreDashboardData } from "@/assets/assets"
-import Loading from "@/components/Loading"
+import ContentLoader from "@/components/ContentLoader"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 import { CircleDollarSignIcon, ShoppingBasketIcon, StarIcon, TagsIcon } from "lucide-react"
@@ -47,7 +47,7 @@ export default function Dashboard() {
         fetchDashboardData()
     }, [])
 
-    if (loading) return <Loading />
+    if (loading) return <ContentLoader />
 
     return (
         <div className=" text-slate-500 mb-28">

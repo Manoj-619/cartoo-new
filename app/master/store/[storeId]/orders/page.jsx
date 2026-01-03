@@ -5,7 +5,7 @@ import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 import { Package, Truck, CheckCircle, Clock, X, ChevronDown } from "lucide-react"
 import Image from "next/image"
-import Loading from "@/components/Loading"
+import ContentLoader from "@/components/ContentLoader"
 import { toast } from "react-hot-toast"
 
 const statusOptions = [
@@ -71,7 +71,7 @@ export default function MasterStoreOrders() {
         return statusOptions.find(s => s.value === status) || statusOptions[0]
     }
 
-    if (loading) return <Loading />
+    if (loading) return <ContentLoader />
 
     return (
         <div className="max-w-5xl">

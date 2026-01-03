@@ -5,8 +5,7 @@ import axios from "axios"
 import { StoreIcon, Package, ShoppingCart, TrendingUp, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import MasterLayout from "@/components/master/MasterLayout";
-import Loading from "@/components/Loading"
+import ContentLoader from "@/components/ContentLoader"
 
 export default function MasterDashboard() {
     const { getToken } = useAuth()
@@ -31,7 +30,7 @@ export default function MasterDashboard() {
         fetchStores()
     }, [])
 
-    if (loading) return <Loading />
+    if (loading) return <ContentLoader />
 
     const totalProducts = stores.reduce((acc, store) => acc + (store._count?.Product || 0), 0)
     const totalOrders = stores.reduce((acc, store) => acc + (store._count?.Order || 0), 0)
@@ -46,8 +45,7 @@ export default function MasterDashboard() {
     ]
 
     return (
-        <MasterLayout>
-            <div className="max-w-6xl">
+        <div className="max-w-6xl">
                 <h1 className="text-2xl font-semibold text-slate-800 mb-2">Master Dashboard</h1>
                 <p className="text-slate-500 mb-8">Manage all vendor stores and their products</p>
 
@@ -130,8 +128,7 @@ export default function MasterDashboard() {
                     {stores.length === 0 && (
                         <p className="p-8 text-center text-slate-500">No stores found</p>
                     )}
-                </div>
             </div>
-        </MasterLayout>
+        </div>
     )
 }

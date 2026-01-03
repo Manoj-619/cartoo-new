@@ -4,9 +4,8 @@ import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 import { ShieldCheck, Check, X, Mail, Phone, MapPin, Calendar } from "lucide-react"
 import Image from "next/image"
-import Loading from "@/components/Loading"
+import ContentLoader from "@/components/ContentLoader"
 import { toast } from "react-hot-toast"
-import MasterLayout from "@/components/master/MasterLayout"
 
 export default function MasterApproveVendors() {
     const { getToken } = useAuth()
@@ -67,11 +66,10 @@ export default function MasterApproveVendors() {
         }
     }
 
-    if (loading) return <MasterLayout><Loading /></MasterLayout>
+    if (loading) return <ContentLoader />
 
     return (
-        <MasterLayout pendingCount={pendingStores.length}>
-            <div className="max-w-4xl">
+        <div className="max-w-4xl">
                 <div className="flex items-center gap-3 mb-2">
                     <ShieldCheck className="text-purple-600" size={28} />
                     <h1 className="text-2xl font-semibold text-slate-800">Approve Vendors</h1>
@@ -280,6 +278,5 @@ export default function MasterApproveVendors() {
                     </div>
                 )}
             </div>
-        </MasterLayout>
     )
 }

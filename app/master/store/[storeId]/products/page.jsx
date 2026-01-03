@@ -6,7 +6,7 @@ import axios from "axios"
 import { Pencil, Trash2, X, Layers, Plus, Search } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import Loading from "@/components/Loading"
+import ContentLoader from "@/components/ContentLoader"
 import { toast } from "react-hot-toast"
 
 const categories = ['Electronics', 'Clothing', 'Home & Kitchen', 'Beauty & Health', 'Toys & Games', 'Sports & Outdoors', 'Books & Media', 'Food & Drink', 'Hobbies & Crafts', 'Others']
@@ -171,7 +171,7 @@ export default function MasterStoreProducts() {
         }
     }
 
-    if (loading) return <Loading />
+    if (loading) return <ContentLoader />
 
     return (
         <div className="max-w-5xl">

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from "react"
-import Loading from "@/components/Loading"
+import ContentLoader from "@/components/ContentLoader"
 import { orderDummyData } from "@/assets/assets"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
@@ -56,7 +56,7 @@ export default function StoreOrders() {
         fetchOrders()
     }, [])
 
-    if (loading) return <Loading />
+    if (loading) return <ContentLoader />
 
     return (
         <>

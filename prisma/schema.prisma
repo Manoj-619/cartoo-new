@@ -170,6 +170,40 @@ model Wishlist {
     @@unique([userId, productId])
 }
 
+// Site Settings (Banner, Hero, Footer, etc.)
+model SiteSettings {
+    id              String   @id @default("main")
+    // Banner Settings
+    bannerEnabled   Boolean  @default(true)
+    bannerText      String   @default("Get 20% OFF on Your First Order!")
+    bannerButtonText String  @default("Claim Offer")
+    bannerCouponCode String  @default("NEW20")
+    bannerGradient  String   @default("from-violet-500 via-[#9938CA] to-[#E0724A]")
+    // Hero Settings
+    heroTagText     String   @default("Free Shipping on Orders Above $50!")
+    heroHeadline    String   @default("Gadgets you'll love. Prices you'll trust.")
+    heroStartPrice  String   @default("4.90")
+    heroButtonText  String   @default("LEARN MORE")
+    heroMainImage   String?
+    heroCard1Title  String   @default("Best products")
+    heroCard1Image  String?
+    heroCard2Title  String   @default("20% discounts")
+    heroCard2Image  String?
+    // Marquee Categories
+    marqueeCategories String @default("Headphones,Speakers,Watch,Earbuds,Mouse,Decoration")
+    // Footer Settings
+    footerDescription String @default("Welcome to cartoo, your ultimate destination for the latest and smartest gadgets. From smartphones and smartwatches to essential accessories, we bring you the best in innovation — all in one place.")
+    footerPhone     String   @default("+91 6381550266")
+    footerEmail     String   @default("cartoobusiness@gmail.com")
+    footerAddress   String   @default("Rajapalaym, 626102")
+    footerFacebook  String?
+    footerInstagram String?
+    footerTwitter   String?
+    footerLinkedin  String?
+    footerCopyright String   @default("Copyright 2025 © cartoo All Right Reserved.")
+    updatedAt       DateTime @updatedAt
+}
+
 // Required for creating a Store: userId, name, username, email, contact, logo, description, address (optional: , status, isActive)
 model Store {
     id            String   @id @default(cuid())

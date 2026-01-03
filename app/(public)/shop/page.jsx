@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useMemo } from "react"
+import { Suspense, useState, useMemo, useEffect } from "react"
 import ProductCard from "@/components/ProductCard"
 import { MoveLeftIcon, SlidersHorizontal, X, ChevronDown } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -33,16 +33,27 @@ const ProductCardSkeleton = () => (
 function ShopContent() {
     const searchParams = useSearchParams()
     const search = searchParams.get('search')
+    const categoryParam = searchParams.get('category')
     const router = useRouter()
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
 
     const { list: products, loading, error } = useSelector(state => state.product)
 
-    // Filter states
-    const [selectedCategory, setSelectedCategory] = useState('All')
+    // Filter states - initialize category from URL if valid
+    const initialCategory = categoryParam && categories.includes(categoryParam) ? categoryParam : 'All'
+    const [selectedCategory, setSelectedCategory] = useState(initialCategory)
     const [priceRange, setPriceRange] = useState({ min: '', max: '' })
     const [sortBy, setSortBy] = useState('recommended')
     const [showFilters, setShowFilters] = useState(false)
+
+    // Sync category with URL param changes
+    useEffect(() => {
+        if (categoryParam && categories.includes(categoryParam)) {
+            setSelectedCategory(categoryParam)
+        } else if (!categoryParam) {
+            setSelectedCategory('All')
+        }
+    }, [categoryParam])
 
     // Calculate max price for reference
     const maxProductPrice = useMemo(() => {

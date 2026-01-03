@@ -7,7 +7,6 @@ import { UserPlus, ArrowLeft, Upload } from "lucide-react"
 import Image from "next/image"
 import { assets } from "@/assets/assets"
 import { toast } from "react-hot-toast"
-import MasterLayout from "@/components/master/MasterLayout"
 
 export default function MasterAddVendor() {
     const router = useRouter()
@@ -83,8 +82,7 @@ export default function MasterAddVendor() {
     }
 
     return (
-        <MasterLayout>
-            <div className="max-w-2xl">
+        <div className="max-w-2xl">
                 <button 
                     onClick={() => router.back()}
                     className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-6"
@@ -320,6 +318,5 @@ export default function MasterAddVendor() {
                     </button>
                 </form>
             </div>
-        </MasterLayout>
     )
 }

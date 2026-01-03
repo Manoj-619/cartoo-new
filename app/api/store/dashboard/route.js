@@ -10,8 +10,8 @@ export async function GET(request){
         const { userId } = getAuth(request)
         const storeId = await authSeller(userId)
 
-        // Get all orders for seller
-        const orders = await prisma.order.findMany({where: {storeId}})
+        // Get all paid orders for seller
+        const orders = await prisma.order.findMany({where: {storeId, isPaid: true}})
 
          // Get all products with ratings for seller
          const products = await prisma.product.findMany({where: {storeId}})

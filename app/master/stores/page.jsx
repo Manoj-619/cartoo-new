@@ -5,9 +5,8 @@ import axios from "axios"
 import { Search, MoreVertical, Package, ShoppingCart, Pencil, Trash2, Power, X, Check } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import Loading from "@/components/Loading"
+import ContentLoader from "@/components/ContentLoader"
 import { toast } from "react-hot-toast"
-import MasterLayout from "@/components/master/MasterLayout";
 
 export default function MasterStores() {
     const { getToken } = useAuth()
@@ -150,11 +149,10 @@ export default function MasterStores() {
         }
     }
 
-    if (loading) return <Loading />
+    if (loading) return <ContentLoader />
 
     return (
-        <MasterLayout>
-            <div className="max-w-6xl">
+        <div className="max-w-6xl">
                 <h1 className="text-2xl font-semibold text-slate-800 mb-2">All Stores</h1>
                 <p className="text-slate-500 mb-6">Manage all vendor stores on the platform</p>
 
@@ -360,6 +358,5 @@ export default function MasterStores() {
                     </div>
                 )}
             </div>
-        </MasterLayout>
     )
 }
