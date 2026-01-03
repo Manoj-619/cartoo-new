@@ -26,7 +26,11 @@ export default function CreateStore() {
         email: "",
         contact: "",
         address: "",
-        image: ""
+        image: "",
+        bankAccount: "",
+        bankIfsc: "",
+        bankName: "",
+        bankUpi: ""
     })
 
     const onChangeHandler = (e) => {
@@ -78,6 +82,10 @@ export default function CreateStore() {
             formData.append("email", storeInfo.email)
             formData.append("contact", storeInfo.contact)
             formData.append("address", storeInfo.address)
+            formData.append("bankAccount", storeInfo.bankAccount)
+            formData.append("bankIfsc", storeInfo.bankIfsc)
+            formData.append("bankName", storeInfo.bankName)
+            formData.append("bankUpi", storeInfo.bankUpi)
             if(storeInfo.image){
                 formData.append("image", storeInfo.image)
             }
@@ -139,6 +147,24 @@ export default function CreateStore() {
 
                         <p>Address</p>
                         <textarea name="address" onChange={onChangeHandler} value={storeInfo.address} rows={5} placeholder="Enter your store address" className="border border-slate-300 outline-slate-400 w-full max-w-lg p-2 rounded resize-none" />
+
+                        {/* Bank Details Section */}
+                        <div className="mt-8 w-full max-w-lg">
+                            <h2 className="text-xl text-slate-800 font-medium mb-4">Bank Details</h2>
+                            <p className="text-sm text-slate-400 mb-4">Required for receiving payments</p>
+                            
+                            <p>Account Holder Name <span className="text-red-400">*</span></p>
+                            <input name="bankName" onChange={onChangeHandler} value={storeInfo.bankName} type="text" placeholder="Enter account holder name" className="border border-slate-300 outline-slate-400 w-full p-2 rounded mb-3" required />
+
+                            <p>Account Number <span className="text-red-400">*</span></p>
+                            <input name="bankAccount" onChange={onChangeHandler} value={storeInfo.bankAccount} type="text" placeholder="Enter bank account number" className="border border-slate-300 outline-slate-400 w-full p-2 rounded mb-3" required />
+
+                            <p>IFSC Code <span className="text-red-400">*</span></p>
+                            <input name="bankIfsc" onChange={onChangeHandler} value={storeInfo.bankIfsc} type="text" placeholder="Enter IFSC code" className="border border-slate-300 outline-slate-400 w-full p-2 rounded mb-3" required />
+
+                            <p>UPI ID <span className="text-slate-400 text-sm">(Optional)</span></p>
+                            <input name="bankUpi" onChange={onChangeHandler} value={storeInfo.bankUpi} type="text" placeholder="e.g., yourname@upi" className="border border-slate-300 outline-slate-400 w-full p-2 rounded" />
+                        </div>
 
                         <button className="bg-slate-800 text-white px-12 py-2 rounded mt-10 mb-40 active:scale-95 hover:bg-slate-900 transition ">Submit</button>
                     </form>

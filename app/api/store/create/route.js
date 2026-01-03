@@ -18,9 +18,17 @@ export async function POST(request){
         const contact = formData.get("contact")
         const address = formData.get("address")
         const image = formData.get("image")
+        const bankAccount = formData.get("bankAccount")
+        const bankIfsc = formData.get("bankIfsc")
+        const bankName = formData.get("bankName")
+        const bankUpi = formData.get("bankUpi")
 
         if(!name || !username || !description || !email || !contact || !address){
             return NextResponse.json({error: "missing store info"}, {status: 400})
+        }
+
+        if(!bankAccount || !bankIfsc || !bankName){
+            return NextResponse.json({error: "Bank details are required"}, {status: 400})
         }
 
         // Ensure user exists in database (sync from Clerk if needed)
@@ -74,6 +82,10 @@ export async function POST(request){
                 contact,
                 address,
                 logo: optimizedImage,
+                bankAccount,
+                bankIfsc,
+                bankName,
+                bankUpi: bankUpi || null,
                 user: { connect: { id: userId } }
             }
         })

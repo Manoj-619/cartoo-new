@@ -16,18 +16,26 @@ export default function StoreLayout({ children }) {
     const [loading, setLoading] = useState(true)
     const [isMaster, setIsMaster] = useState(false)
     const [selectedStore, setSelectedStore] = useState(null)
+    const [pendingCount, setPendingCount] = useState(0)
 
     const fetchData = async () => {
         try {
             const token = await getToken()
             
-            // Check if master vendor
-            const { data: masterData } = await axios.get('/api/master/is-master', {
-                headers: { Authorization: `Bearer ${token}` }
-            })
-            setIsMaster(masterData.isMaster)
+            // Check if master vendor and get pending count
+            const [masterRes, vendorRes] = await Promise.all([
+                axios.get('/api/master/is-master', {
+                    headers: { Authorization: `Bearer ${token}` }
+                }),
+                axios.get('/api/master/vendor', {
+                    headers: { Authorization: `Bearer ${token}` }
+                }).catch(() => ({ data: { pendingCount: 0 } }))
+            ])
             
-            if (masterData.isMaster) {
+            setIsMaster(masterRes.data.isMaster)
+            setPendingCount(vendorRes.data.pendingCount || 0)
+            
+            if (masterRes.data.isMaster) {
                 // Get all stores and find the selected one
                 const { data: storesData } = await axios.get('/api/master/stores', {
                     headers: { Authorization: `Bearer ${token}` }
@@ -80,7 +88,7 @@ export default function StoreLayout({ children }) {
         <div className="flex flex-col h-screen bg-slate-50">
             <MasterNavbar />
             <div className="flex flex-1 items-start h-full overflow-y-scroll no-scrollbar">
-                <MasterSidebar selectedStore={selectedStore} />
+                <MasterSidebar selectedStore={selectedStore} pendingCount={pendingCount} />
                 <div className="flex-1 h-full p-5 lg:p-8 overflow-y-scroll">
                     {children}
                 </div>

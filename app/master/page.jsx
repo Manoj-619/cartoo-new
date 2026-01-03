@@ -78,8 +78,8 @@ export default function MasterDashboard() {
                                 <p className="text-sm text-yellow-600">Review and approve store requests</p>
                             </div>
                         </div>
-                        <Link href="/master/stores" className="text-yellow-700 hover:text-yellow-800 font-medium flex items-center gap-1">
-                            View <ArrowRight size={16} />
+                        <Link href="/master/approve" className="text-yellow-700 hover:text-yellow-800 font-medium flex items-center gap-1">
+                            Review Now <ArrowRight size={16} />
                         </Link>
                     </div>
                 )}

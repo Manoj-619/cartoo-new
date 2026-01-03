@@ -1,18 +1,20 @@
 'use client'
 
 import { usePathname } from "next/navigation"
-import { HomeIcon, StoreIcon, Package, ShoppingCart, Plus } from "lucide-react"
+import { HomeIcon, StoreIcon, Package, ShoppingCart, Plus, UserPlus, ShieldCheck } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useUser } from "@clerk/nextjs"
 
-const MasterSidebar = ({ selectedStore }) => {
+const MasterSidebar = ({ selectedStore, pendingCount = 0 }) => {
     const { user } = useUser()
     const pathname = usePathname()
 
     const mainLinks = [
         { name: 'Dashboard', href: '/master', icon: HomeIcon },
         { name: 'All Stores', href: '/master/stores', icon: StoreIcon },
+        { name: 'Add Vendor', href: '/master/add-vendor', icon: UserPlus },
+        { name: 'Approve Vendors', href: '/master/approve', icon: ShieldCheck, badge: pendingCount },
     ]
 
     const storeLinks = selectedStore ? [
@@ -42,7 +44,14 @@ const MasterSidebar = ({ selectedStore }) => {
                         className={`relative flex items-center gap-3 text-slate-600 hover:bg-slate-50 p-3 transition ${pathname === link.href && 'bg-purple-50 text-purple-700'}`}
                     >
                         <link.icon size={18} className="sm:ml-3" />
-                        <p className="max-sm:hidden">{link.name}</p>
+                        <p className="max-sm:hidden flex items-center gap-2">
+                            {link.name}
+                            {link.badge > 0 && (
+                                <span className="bg-yellow-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+                                    {link.badge}
+                                </span>
+                            )}
+                        </p>
                         {pathname === link.href && <span className="absolute bg-purple-500 right-0 top-1.5 bottom-1.5 w-1 rounded-l"></span>}
                     </Link>
                 ))}

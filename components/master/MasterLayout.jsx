@@ -8,19 +8,26 @@ import MasterSidebar from "./MasterSidebar"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 
-const MasterLayout = ({ children, selectedStore = null }) => {
+const MasterLayout = ({ children, selectedStore = null, pendingCount: propPendingCount }) => {
     const { getToken } = useAuth()
 
     const [isMaster, setIsMaster] = useState(false)
     const [loading, setLoading] = useState(true)
+    const [pendingCount, setPendingCount] = useState(propPendingCount || 0)
 
-    const fetchIsMaster = async () => {
+    const fetchMasterData = async () => {
         try {
             const token = await getToken()
-            const { data } = await axios.get('/api/master/is-master', { 
-                headers: { Authorization: `Bearer ${token}` }
-            })
-            setIsMaster(data.isMaster)
+            const [masterRes, vendorRes] = await Promise.all([
+                axios.get('/api/master/is-master', { 
+                    headers: { Authorization: `Bearer ${token}` }
+                }),
+                axios.get('/api/master/vendor', { 
+                    headers: { Authorization: `Bearer ${token}` }
+                }).catch(() => ({ data: { pendingCount: 0 } }))
+            ])
+            setIsMaster(masterRes.data.isMaster)
+            setPendingCount(vendorRes.data.pendingCount || 0)
         } catch (error) {
             console.log(error)
         } finally {
@@ -29,7 +36,7 @@ const MasterLayout = ({ children, selectedStore = null }) => {
     }
 
     useEffect(() => {
-        fetchIsMaster()
+        fetchMasterData()
     }, [])
 
     return loading ? (
@@ -38,7 +45,7 @@ const MasterLayout = ({ children, selectedStore = null }) => {
         <div className="flex flex-col h-screen bg-slate-50">
             <MasterNavbar />
             <div className="flex flex-1 items-start h-full overflow-y-scroll no-scrollbar">
-                <MasterSidebar selectedStore={selectedStore} />
+                <MasterSidebar selectedStore={selectedStore} pendingCount={pendingCount} />
                 <div className="flex-1 h-full p-5 lg:p-8 overflow-y-scroll">
                     {children}
                 </div>

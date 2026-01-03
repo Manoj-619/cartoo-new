@@ -1,5 +1,5 @@
 'use client'
-import { PackageIcon, Search, ShoppingCart, Heart } from "lucide-react";
+import { PackageIcon, Search, ShoppingCart, Heart, LayoutDashboard, Store, Briefcase } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { useSelector, useDispatch } from "react-redux";
 import {useUser, useClerk, UserButton, Protect, useAuth} from "@clerk/nextjs"
 import { assets } from "@/assets/assets";
 import { fetchWishlist } from "@/lib/features/wishlist/wishlistSlice";
+import axios from "axios";
 
 const Navbar = () => {
 
@@ -18,6 +19,11 @@ const Navbar = () => {
     const dispatch = useDispatch()
 
     const [search, setSearch] = useState('')
+    const [isMaster, setIsMaster] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [isSeller, setIsSeller] = useState(false);
+    const [loadingRoles, setLoadingRoles] = useState(true);
+
     const cartCount = useSelector(state => state.cart.total)
     const wishlistCount = useSelector(state => state.wishlist.productIds.length)
 
@@ -28,9 +34,94 @@ const Navbar = () => {
         }
     }, [isSignedIn, dispatch, getToken])
 
+    // Fetch user roles
+    useEffect(() => {
+        if (isSignedIn) {
+            const fetchRoles = async () => {
+                setLoadingRoles(true);
+                try {
+                    const token = await getToken();
+                    const headers = { Authorization: `Bearer ${token}` };
+
+                    const [masterRes, adminRes, sellerRes] = await Promise.all([
+                        axios.get('/api/master/is-master', { headers }).catch(e => ({ data: { isMaster: false } })),
+                        axios.get('/api/admin/is-admin', { headers }).catch(e => ({ data: { isAdmin: false } })),
+                        axios.get('/api/store/is-seller', { headers }).catch(e => ({ data: { isSeller: false } }))
+                    ]);
+
+                    setIsMaster(masterRes.data.isMaster);
+                    setIsAdmin(adminRes.data.isAdmin);
+                    setIsSeller(sellerRes.data.isSeller);
+
+                } catch (error) {
+                    console.error("Error fetching user roles:", error);
+                } finally {
+                    setLoadingRoles(false);
+                }
+            };
+            fetchRoles();
+        } else {
+            setIsMaster(false);
+            setIsAdmin(false);
+            setIsSeller(false);
+            setLoadingRoles(false);
+        }
+    }, [isSignedIn, getToken]);
+
     const handleSearch = (e) => {
         e.preventDefault()
         router.push(`/shop?search=${search}`)
+    }
+
+    // Build role-based menu items
+    const roleMenuItems = [];
+
+    // Show Master Dashboard if user is a master vendor
+    if (isMaster) {
+        roleMenuItems.push(
+            <UserButton.Action 
+                key="master"
+                labelIcon={<LayoutDashboard size={16}/>} 
+                label="Master Dashboard" 
+                onClick={() => router.push('/master')} 
+            />
+        );
+    }
+
+    // Show Admin Dashboard if user is an admin
+    if (isAdmin) {
+        roleMenuItems.push(
+            <UserButton.Action 
+                key="admin"
+                labelIcon={<LayoutDashboard size={16}/>} 
+                label="Admin Dashboard" 
+                onClick={() => router.push('/admin')} 
+            />
+        );
+    }
+
+    // Show My Store if user is a seller
+    if (isSeller) {
+        roleMenuItems.push(
+            <UserButton.Action 
+                key="seller"
+                labelIcon={<Store size={16}/>} 
+                label="My Store" 
+                onClick={() => router.push('/store')} 
+            />
+        );
+    }
+
+    // Show Become a Vendor only if not loading and user has no vendor role
+    if (!loadingRoles && !isMaster && !isSeller) {
+        roleMenuItems.push(
+            <UserButton.Action 
+                key="vendor"
+                labelIcon={<Briefcase size={16}/>} 
+                label="Become a Vendor" 
+                onClick={() => router.push('/create-store')} 
+            />
+        );
     }
 
     return (
@@ -82,6 +173,7 @@ const Navbar = () => {
                         ) : (
                             <UserButton>
                                 <UserButton.MenuItems>
+                                    {roleMenuItems}
                                     <UserButton.Action labelIcon={<PackageIcon size={16}/>} label="My Orders" onClick={()=> router.push('/orders')}/>
                                 </UserButton.MenuItems>
                             </UserButton>
@@ -97,6 +189,7 @@ const Navbar = () => {
                             <div>
                             <UserButton>
                                 <UserButton.MenuItems>
+                                    {roleMenuItems}
                                     <UserButton.Action labelIcon={<Heart size={16}/>} label="Wishlist" onClick={()=> router.push('/wishlist')}/>
                                     <UserButton.Action labelIcon={<ShoppingCart size={16}/>} label="Cart" onClick={()=> router.push('/cart')}/>
                                     <UserButton.Action labelIcon={<PackageIcon size={16}/>} label="My Orders" onClick={()=> router.push('/orders')}/>
