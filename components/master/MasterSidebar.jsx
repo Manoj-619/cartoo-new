@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from "next/navigation"
-import { HomeIcon, StoreIcon, Package, ShoppingCart, Plus, UserPlus, ShieldCheck } from "lucide-react"
+import { HomeIcon, StoreIcon, Package, ShoppingCart, Plus, UserPlus, ShieldCheck, Receipt } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useUser } from "@clerk/nextjs"
@@ -13,6 +13,7 @@ const MasterSidebar = ({ selectedStore, pendingCount = 0 }) => {
     const mainLinks = [
         { name: 'Dashboard', href: '/master', icon: HomeIcon },
         { name: 'All Stores', href: '/master/stores', icon: StoreIcon },
+        { name: 'All Orders', href: '/master/orders', icon: Receipt },
         { name: 'Add Vendor', href: '/master/add-vendor', icon: UserPlus },
         { name: 'Approve Vendors', href: '/master/approve', icon: ShieldCheck, badge: pendingCount },
     ]
