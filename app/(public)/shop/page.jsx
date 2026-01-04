@@ -1,12 +1,13 @@
 'use client'
 import { Suspense, useState, useMemo, useEffect } from "react"
 import ProductCard from "@/components/ProductCard"
-import { MoveLeftIcon, SlidersHorizontal, X, ChevronDown } from "lucide-react"
+import { MoveLeftIcon, SlidersHorizontal, X, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSelector } from "react-redux"
 import Loading from "@/components/Loading"
 
 const categories = ['All', 'Electronics', 'Clothing', 'Home & Kitchen', 'Beauty & Health', 'Toys & Games', 'Sports & Outdoors', 'Books & Media', 'Food & Drink', 'Hobbies & Crafts', 'Others']
+const PRODUCTS_PER_PAGE = 12
 
 const sortOptions = [
     { label: 'Recommended', value: 'recommended' },
@@ -45,6 +46,7 @@ function ShopContent() {
     const [priceRange, setPriceRange] = useState({ min: '', max: '' })
     const [sortBy, setSortBy] = useState('recommended')
     const [showFilters, setShowFilters] = useState(false)
+    const [currentPage, setCurrentPage] = useState(1)
 
     // Sync category with URL param changes
     useEffect(() => {
@@ -123,10 +125,28 @@ function ShopContent() {
         return result
     }, [products, search, selectedCategory, priceRange, sortBy])
 
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [selectedCategory, priceRange, sortBy, search])
+
+    // Pagination calculations
+    const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE)
+    const paginatedProducts = useMemo(() => {
+        const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE
+        return filteredProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE)
+    }, [filteredProducts, currentPage])
+
+    const goToPage = (page) => {
+        setCurrentPage(page)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
     const clearFilters = () => {
         setSelectedCategory('All')
         setPriceRange({ min: '', max: '' })
         setSortBy('recommended')
+        setCurrentPage(1)
     }
 
     const hasActiveFilters = selectedCategory !== 'All' || priceRange.min !== '' || priceRange.max !== '' || sortBy !== 'recommended'
@@ -299,11 +319,91 @@ function ShopContent() {
                                 ))}
                             </div>
                         ) : filteredProducts.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 xl:gap-6 mb-32">
-                                {filteredProducts.map((product) => (
-                                    <ProductCard key={product.id} product={product} />
-                                ))}
-                            </div>
+                            <>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 xl:gap-6">
+                                    {paginatedProducts.map((product) => (
+                                        <ProductCard key={product.id} product={product} />
+                                    ))}
+                                </div>
+
+                                {/* Pagination */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-center gap-2 mt-10 mb-20">
+                                        {/* Previous Button */}
+                                        <button
+                                            onClick={() => goToPage(currentPage - 1)}
+                                            disabled={currentPage === 1}
+                                            className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                        >
+                                            <ChevronLeft size={20} />
+                                        </button>
+
+                                        {/* Page Numbers */}
+                                        <div className="flex items-center gap-1">
+                                            {/* First page */}
+                                            {currentPage > 3 && (
+                                                <>
+                                                    <button
+                                                        onClick={() => goToPage(1)}
+                                                        className="w-10 h-10 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition"
+                                                    >
+                                                        1
+                                                    </button>
+                                                    {currentPage > 4 && <span className="px-1 text-slate-400">...</span>}
+                                                </>
+                                            )}
+
+                                            {/* Visible page numbers */}
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                                .filter(page => {
+                                                    if (totalPages <= 5) return true
+                                                    if (page >= currentPage - 1 && page <= currentPage + 1) return true
+                                                    return false
+                                                })
+                                                .map(page => (
+                                                    <button
+                                                        key={page}
+                                                        onClick={() => goToPage(page)}
+                                                        className={`w-10 h-10 rounded-lg text-sm font-medium transition ${
+                                                            currentPage === page
+                                                                ? 'bg-slate-800 text-white'
+                                                                : 'text-slate-600 hover:bg-slate-100'
+                                                        }`}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                ))}
+
+                                            {/* Last page */}
+                                            {currentPage < totalPages - 2 && (
+                                                <>
+                                                    {currentPage < totalPages - 3 && <span className="px-1 text-slate-400">...</span>}
+                                                    <button
+                                                        onClick={() => goToPage(totalPages)}
+                                                        className="w-10 h-10 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition"
+                                                    >
+                                                        {totalPages}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Next Button */}
+                                        <button
+                                            onClick={() => goToPage(currentPage + 1)}
+                                            disabled={currentPage === totalPages}
+                                            className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                        >
+                                            <ChevronRight size={20} />
+                                        </button>
+
+                                        {/* Page info */}
+                                        <span className="ml-4 text-sm text-slate-500">
+                                            Page {currentPage} of {totalPages}
+                                        </span>
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             <div className="text-center py-16">
                                 <p className="text-slate-500 text-lg">No products found</p>

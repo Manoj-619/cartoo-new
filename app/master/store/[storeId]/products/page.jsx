@@ -337,54 +337,74 @@ export default function MasterStoreProducts() {
                             {/* Variants */}
                             <div className="mb-6">
                                 <h3 className="text-sm font-medium text-slate-700 mb-3">Variants ({editForm.variants.length})</h3>
-                                <div className="space-y-3">
+                                <div className="space-y-4">
                                     {editForm.variants.map((variant, index) => (
                                         <div key={index} className="p-4 bg-slate-50 rounded-lg">
-                                            <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center justify-between mb-4">
                                                 <span className="text-sm font-medium text-slate-600">Variant {index + 1}</span>
                                                 {editForm.variants.length > 1 && (
-                                                    <button type="button" onClick={() => removeVariant(index)} className="text-red-500">
+                                                    <button type="button" onClick={() => removeVariant(index)} className="text-red-500 hover:text-red-600">
                                                         <Trash2 size={14} />
                                                     </button>
                                                 )}
                                             </div>
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                                <input
-                                                    type="text"
-                                                    value={variant.name}
-                                                    onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                                                    placeholder="Name (e.g., 64GB)"
-                                                    className="p-2 text-sm border border-slate-200 rounded-lg outline-none"
-                                                />
-                                                <div className="flex gap-1">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {/* Variant Name */}
+                                                <div>
+                                                    <label className="block text-xs text-slate-500 mb-1">Variant Name</label>
                                                     <input
                                                         type="text"
-                                                        value={variant.color}
-                                                        onChange={(e) => updateVariant(index, 'color', e.target.value)}
-                                                        placeholder="Color"
-                                                        className="flex-1 p-2 text-sm border border-slate-200 rounded-lg outline-none"
-                                                    />
-                                                    <input
-                                                        type="color"
-                                                        value={variant.colorHex}
-                                                        onChange={(e) => updateVariant(index, 'colorHex', e.target.value)}
-                                                        className="w-9 h-9 border border-slate-200 rounded-lg cursor-pointer"
+                                                        value={variant.name}
+                                                        onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                                                        placeholder="e.g., 64GB, Large, etc."
+                                                        className="w-full p-2.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-purple-400"
                                                     />
                                                 </div>
-                                                <input
-                                                    type="number"
-                                                    value={variant.mrp}
-                                                    onChange={(e) => updateVariant(index, 'mrp', e.target.value)}
-                                                    placeholder="MRP"
-                                                    className="p-2 text-sm border border-slate-200 rounded-lg outline-none"
-                                                />
-                                                <input
-                                                    type="number"
-                                                    value={variant.price}
-                                                    onChange={(e) => updateVariant(index, 'price', e.target.value)}
-                                                    placeholder="Price"
-                                                    className="p-2 text-sm border border-slate-200 rounded-lg outline-none"
-                                                />
+                                                
+                                                {/* Color */}
+                                                <div>
+                                                    <label className="block text-xs text-slate-500 mb-1">Color</label>
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={variant.color}
+                                                            onChange={(e) => updateVariant(index, 'color', e.target.value)}
+                                                            placeholder="e.g., Red, Blue"
+                                                            className="flex-1 p-2.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-purple-400"
+                                                        />
+                                                        <input
+                                                            type="color"
+                                                            value={variant.colorHex || '#000000'}
+                                                            onChange={(e) => updateVariant(index, 'colorHex', e.target.value)}
+                                                            className="w-10 h-10 p-1 border border-slate-200 rounded-lg cursor-pointer bg-white"
+                                                            title="Pick color"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Actual Price */}
+                                                <div>
+                                                    <label className="block text-xs text-slate-500 mb-1">Actual Price</label>
+                                                    <input
+                                                        type="number"
+                                                        value={variant.mrp}
+                                                        onChange={(e) => updateVariant(index, 'mrp', e.target.value)}
+                                                        placeholder="0"
+                                                        className="w-full p-2.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-purple-400"
+                                                    />
+                                                </div>
+                                                
+                                                {/* Offer Price */}
+                                                <div>
+                                                    <label className="block text-xs text-slate-500 mb-1">Offer Price</label>
+                                                    <input
+                                                        type="number"
+                                                        value={variant.price}
+                                                        onChange={(e) => updateVariant(index, 'price', e.target.value)}
+                                                        placeholder="0"
+                                                        className="w-full p-2.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-purple-400"
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -392,7 +412,7 @@ export default function MasterStoreProducts() {
                                 <button
                                     type="button"
                                     onClick={addVariant}
-                                    className="w-full mt-3 py-2 border-2 border-dashed border-slate-300 text-slate-500 rounded-lg hover:border-purple-400 hover:text-purple-600 transition text-sm"
+                                    className="w-full mt-3 py-2.5 border-2 border-dashed border-slate-300 text-slate-500 rounded-lg hover:border-purple-400 hover:text-purple-600 transition text-sm"
                                 >
                                     + Add Variant
                                 </button>

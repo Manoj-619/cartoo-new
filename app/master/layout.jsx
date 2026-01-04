@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from "react"
 import { SignedIn, SignedOut, SignIn, useAuth } from "@clerk/nextjs"
+import { usePathname } from "next/navigation"
 import axios from "axios"
 import Link from "next/link"
 import { ArrowRightIcon } from "lucide-react"
@@ -10,24 +11,35 @@ import ContentLoader from "@/components/ContentLoader"
 
 export default function RootMasterLayout({ children }) {
     const { getToken } = useAuth()
+    const pathname = usePathname()
 
     const [isMaster, setIsMaster] = useState(false)
     const [loading, setLoading] = useState(true)
     const [pendingCount, setPendingCount] = useState(0)
+    const [stores, setStores] = useState([])
+    const [selectedStore, setSelectedStore] = useState(null)
+
+    // Extract storeId from pathname if on a store-specific page
+    const storeIdMatch = pathname.match(/\/master\/store\/([^\/]+)/)
+    const currentStoreId = storeIdMatch ? storeIdMatch[1] : null
 
     const fetchMasterData = async () => {
         try {
             const token = await getToken()
-            const [masterRes, vendorRes] = await Promise.all([
+            const [masterRes, vendorRes, storesRes] = await Promise.all([
                 axios.get('/api/master/is-master', { 
                     headers: { Authorization: `Bearer ${token}` }
                 }),
                 axios.get('/api/master/vendor', { 
                     headers: { Authorization: `Bearer ${token}` }
-                }).catch(() => ({ data: { pendingCount: 0 } }))
+                }).catch(() => ({ data: { pendingCount: 0 } })),
+                axios.get('/api/master/stores', { 
+                    headers: { Authorization: `Bearer ${token}` }
+                }).catch(() => ({ data: { stores: [] } }))
             ])
             setIsMaster(masterRes.data.isMaster)
             setPendingCount(vendorRes.data.pendingCount || 0)
+            setStores(storesRes.data.stores || [])
         } catch (error) {
             console.log(error)
         } finally {
@@ -38,6 +50,16 @@ export default function RootMasterLayout({ children }) {
     useEffect(() => {
         fetchMasterData()
     }, [])
+
+    // Update selectedStore when pathname or stores change
+    useEffect(() => {
+        if (currentStoreId && stores.length > 0) {
+            const store = stores.find(s => s.id === currentStoreId)
+            setSelectedStore(store || null)
+        } else {
+            setSelectedStore(null)
+        }
+    }, [currentStoreId, stores])
 
     return (
         <>
@@ -56,7 +78,7 @@ export default function RootMasterLayout({ children }) {
                     <div className="flex flex-col h-screen bg-slate-50">
                         <MasterNavbar />
                         <div className="flex flex-1 items-start h-full overflow-y-scroll no-scrollbar">
-                            <MasterSidebar pendingCount={pendingCount} />
+                            <MasterSidebar pendingCount={pendingCount} selectedStore={selectedStore} />
                             <div className="flex-1 h-full p-5 lg:p-8 overflow-y-scroll">
                                 {children}
                             </div>

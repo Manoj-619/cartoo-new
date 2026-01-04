@@ -1,8 +1,11 @@
 'use client'
+import { useState } from "react"
 import Image from "next/image"
-import { MapPin, Mail, Phone } from "lucide-react"
+import { MapPin, Mail, Phone, Building2, CreditCard, ChevronDown, ChevronUp } from "lucide-react"
 
-const StoreInfo = ({store}) => {
+const StoreInfo = ({store, showBankDetails = true}) => {
+    const [bankDetailsOpen, setBankDetailsOpen] = useState(false)
+
     return (
         <div className="flex-1 space-y-2 text-sm">
             {store.logo ? (
@@ -33,7 +36,63 @@ const StoreInfo = ({store}) => {
             <p className="flex items-center gap-2"> <MapPin size={16} /> {store.address}</p>
             <p className="flex items-center gap-2"><Phone size={16} /> {store.contact}</p>
             <p className="flex items-center gap-2"><Mail size={16} />  {store.email}</p>
-            <p className="text-slate-700 mt-5">Applied  on <span className="text-xs">{new Date(store.createdAt).toLocaleDateString()}</span> by</p>
+
+            {/* Bank Details Section */}
+            {showBankDetails && (store.bankAccount || store.bankIfsc || store.bankName || store.bankUpi) && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                    <button 
+                        onClick={() => setBankDetailsOpen(!bankDetailsOpen)}
+                        className="flex items-center gap-2 text-slate-700 font-medium hover:text-slate-900 transition"
+                    >
+                        <CreditCard size={16} />
+                        Bank Details
+                        {bankDetailsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                    
+                    {bankDetailsOpen && (
+                        <div className="mt-3 p-4 bg-slate-50 rounded-lg space-y-2">
+                            {store.bankName && (
+                                <div className="flex items-start gap-2">
+                                    <Building2 size={16} className="text-slate-400 mt-0.5" />
+                                    <div>
+                                        <p className="text-xs text-slate-400">Bank Name</p>
+                                        <p className="text-slate-700 font-medium">{store.bankName}</p>
+                                    </div>
+                                </div>
+                            )}
+                            {store.bankAccount && (
+                                <div className="flex items-start gap-2">
+                                    <CreditCard size={16} className="text-slate-400 mt-0.5" />
+                                    <div>
+                                        <p className="text-xs text-slate-400">Account Number</p>
+                                        <p className="text-slate-700 font-medium font-mono">{store.bankAccount}</p>
+                                    </div>
+                                </div>
+                            )}
+                            {store.bankIfsc && (
+                                <div className="flex items-start gap-2">
+                                    <span className="text-slate-400 text-xs font-bold w-4">IF</span>
+                                    <div>
+                                        <p className="text-xs text-slate-400">IFSC Code</p>
+                                        <p className="text-slate-700 font-medium font-mono">{store.bankIfsc}</p>
+                                    </div>
+                                </div>
+                            )}
+                            {store.bankUpi && (
+                                <div className="flex items-start gap-2">
+                                    <span className="text-slate-400 text-xs font-bold w-4">@</span>
+                                    <div>
+                                        <p className="text-xs text-slate-400">UPI ID</p>
+                                        <p className="text-slate-700 font-medium">{store.bankUpi}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <p className="text-slate-700 mt-5">Applied on <span className="text-xs">{new Date(store.createdAt).toLocaleDateString()}</span> by</p>
             <div className="flex items-center gap-2 text-sm ">
                 <Image width={36} height={36} src={store.user.image} alt={store.user.name} className="w-9 h-9 rounded-full" />
                 <div>
