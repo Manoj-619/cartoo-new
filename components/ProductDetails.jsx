@@ -2,7 +2,7 @@
 
 import { addToCart } from "@/lib/features/cart/cartSlice";
 import { addToWishlist, removeFromWishlist } from "@/lib/features/wishlist/wishlistSlice";
-import { StarIcon, TagIcon, EarthIcon, CreditCardIcon, UserIcon, Heart } from "lucide-react";
+import { StarIcon, TagIcon, CreditCardIcon, Heart, Store } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
 import Image from "next/image";
@@ -117,6 +117,15 @@ const ProductDetails = ({ product }) => {
                         />
                     </button>
                 </div>
+
+                {/* Vendor Name */}
+                {product.store?.name && (
+                    <p className="flex items-center gap-2 text-sm text-slate-500 mt-2">
+                        <Store size={14} />
+                        Sold by <span className="font-medium text-slate-700">{product.store.name}</span>
+                    </p>
+                )}
+
                 <div className='flex items-center mt-2'>
                     {Array(5).fill('').map((_, index) => (
                         <StarIcon key={index} size={14} className='text-transparent mt-0.5' fill={averageRating >= index + 1 ? "#00C950" : "#D1D5DB"} />
