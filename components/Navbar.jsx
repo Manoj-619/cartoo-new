@@ -1,5 +1,5 @@
 'use client'
-import { PackageIcon, Search, ShoppingCart, Heart, LayoutDashboard, Store, Briefcase } from "lucide-react";
+import { PackageIcon, Search, ShoppingCart, Heart, LayoutDashboard, Store, Briefcase, Menu, X, Home } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,7 @@ const Navbar = () => {
     const dispatch = useDispatch()
 
     const [search, setSearch] = useState('')
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [isMaster, setIsMaster] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [isSeller, setIsSeller] = useState(false);
@@ -181,28 +182,95 @@ const Navbar = () => {
 
                     </div>
 
-                    {/* Mobile User Button  */}
-                    <div className="sm:hidden">
+                    {/* Mobile Menu Button & User */}
+                    <div className="sm:hidden flex items-center gap-3">
+                        {/* Cart Icon for Mobile */}
+                        <Link href="/cart" className="relative text-slate-600">
+                            <ShoppingCart size={22} />
+                            <span className="absolute -top-1 -right-1 text-[8px] text-white bg-slate-600 size-4 rounded-full flex items-center justify-center">{cartCount}</span>
+                        </Link>
+
+                        {/* User Button or Login */}
                         { user ? (
-                            <div>
                             <UserButton>
                                 <UserButton.MenuItems>
                                     {roleMenuItems}
                                     <UserButton.Action labelIcon={<Heart size={16}/>} label="Wishlist" onClick={()=> router.push('/wishlist')}/>
-                                    <UserButton.Action labelIcon={<ShoppingCart size={16}/>} label="Cart" onClick={()=> router.push('/cart')}/>
                                     <UserButton.Action labelIcon={<PackageIcon size={16}/>} label="My Orders" onClick={()=> router.push('/orders')}/>
                                 </UserButton.MenuItems>
                             </UserButton>
-                            </div>
                         ) : (
-                            <button onClick={openSignIn} className="px-7 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-sm transition text-white rounded-full">
-                            Login
+                            <button onClick={openSignIn} className="px-5 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-sm transition text-white rounded-full">
+                                Login
+                            </button>
+                        )}
+
+                        {/* Hamburger Menu */}
+                        <button 
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                        >
+                            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
                         </button>
-                        )
-                        }
-                        
                     </div>
                 </div>
+
+                {/* Mobile Menu Dropdown */}
+                {mobileMenuOpen && (
+                    <div className="sm:hidden border-t border-slate-200 py-4 space-y-2">
+                        {/* Search */}
+                        <form onSubmit={(e) => { handleSearch(e); setMobileMenuOpen(false); }} className="flex items-center gap-2 bg-slate-100 px-4 py-3 rounded-lg mx-2 mb-4">
+                            <Search size={18} className="text-slate-500" />
+                            <input 
+                                className="w-full bg-transparent outline-none placeholder-slate-500 text-sm" 
+                                type="text" 
+                                placeholder="Search products" 
+                                value={search} 
+                                onChange={(e) => setSearch(e.target.value)} 
+                            />
+                        </form>
+
+                        {/* Navigation Links */}
+                        <Link 
+                            href="/" 
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 transition"
+                        >
+                            <Home size={20} />
+                            Home
+                        </Link>
+                        <Link 
+                            href="/shop" 
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 transition"
+                        >
+                            <Store size={20} />
+                            Shop
+                        </Link>
+                        <Link 
+                            href="/wishlist" 
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 transition"
+                        >
+                            <Heart size={20} />
+                            Wishlist
+                            {wishlistCount > 0 && (
+                                <span className="text-xs text-white bg-red-500 px-2 py-0.5 rounded-full">{wishlistCount}</span>
+                            )}
+                        </Link>
+                        <Link 
+                            href="/cart" 
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 transition"
+                        >
+                            <ShoppingCart size={20} />
+                            Cart
+                            {cartCount > 0 && (
+                                <span className="text-xs text-white bg-slate-600 px-2 py-0.5 rounded-full">{cartCount}</span>
+                            )}
+                        </Link>
+                    </div>
+                )}
             </div>
             <hr className="border-gray-300" />
         </nav>
