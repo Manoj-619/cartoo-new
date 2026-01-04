@@ -4,7 +4,7 @@ import AddressModal from './AddressModal';
 import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import { Protect, useAuth, useUser } from '@clerk/nextjs'
+import { Protect, useAuth, useUser, useClerk } from '@clerk/nextjs'
 import axios from 'axios';
 import { fetchCart } from '@/lib/features/cart/cartSlice';
 import Script from 'next/script';
@@ -12,7 +12,8 @@ import Script from 'next/script';
 const OrderSummary = ({ totalPrice, items }) => {
 
     const { user } = useUser()
-    const { getToken } = useAuth()
+    const { getToken, isSignedIn } = useAuth()
+    const { openSignIn } = useClerk()
     const dispatch = useDispatch()
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '₹';
 
@@ -59,8 +60,9 @@ const OrderSummary = ({ totalPrice, items }) => {
     const handleCouponCode = async (event) => {
         event.preventDefault();
         try {
-            if (!user) {
-                return toast('Please login to proceed')
+            if (!isSignedIn) {
+                openSignIn()
+                return
             }
             const token = await getToken();
             const { data } = await axios.post('/api/coupon', { code: couponCodeInput }, {
@@ -171,8 +173,9 @@ const OrderSummary = ({ totalPrice, items }) => {
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
 
-        if (!user) {
-            return toast('Please login to place an order')
+        if (!isSignedIn) {
+            openSignIn()
+            return
         }
         if (!selectedAddress) {
             return toast('Please select an address')
@@ -254,7 +257,7 @@ const OrderSummary = ({ totalPrice, items }) => {
                                         </select>
                                     )
                                 }
-                                <button className='flex items-center gap-1 text-slate-600 mt-1' onClick={() => setShowAddressModal(true)} >Add Address <PlusIcon size={18} /></button>
+                                <button className='flex items-center gap-1 text-slate-600 mt-1' onClick={() => isSignedIn ? setShowAddressModal(true) : openSignIn()} >Add Address <PlusIcon size={18} /></button>
                             </div>
                         )
                     }
