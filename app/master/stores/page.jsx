@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
-import { Search, MoreVertical, Package, ShoppingCart, Pencil, Trash2, Power, X, Check } from "lucide-react"
+import { Search, Package, ShoppingCart, Pencil, Trash2, Power, X, Check, ChevronDown, ChevronUp, CreditCard, Building2, Phone, Mail, MapPin } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import ContentLoader from "@/components/ContentLoader"
@@ -18,7 +18,13 @@ export default function MasterStores() {
     // Edit modal state
     const [showEditModal, setShowEditModal] = useState(false)
     const [editingStore, setEditingStore] = useState(null)
-    const [editForm, setEditForm] = useState({ name: '', description: '' })
+    const [editForm, setEditForm] = useState({ 
+        name: '', description: '', email: '', contact: '', address: '',
+        bankAccount: '', bankIfsc: '', bankName: '', bankUpi: ''
+    })
+    
+    // Bank details visibility
+    const [expandedStoreId, setExpandedStoreId] = useState(null)
     
     // Delete confirmation
     const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -111,8 +117,22 @@ export default function MasterStores() {
 
     const openEditModal = (store) => {
         setEditingStore(store)
-        setEditForm({ name: store.name, description: store.description })
+        setEditForm({ 
+            name: store.name || '', 
+            description: store.description || '',
+            email: store.email || '',
+            contact: store.contact || '',
+            address: store.address || '',
+            bankAccount: store.bankAccount || '',
+            bankIfsc: store.bankIfsc || '',
+            bankName: store.bankName || '',
+            bankUpi: store.bankUpi || ''
+        })
         setShowEditModal(true)
+    }
+
+    const toggleBankDetails = (storeId) => {
+        setExpandedStoreId(expandedStoreId === storeId ? null : storeId)
     }
 
     const handleEditSubmit = async (e) => {
@@ -213,6 +233,12 @@ export default function MasterStores() {
                                 </div>
                             </div>
 
+                            {/* Contact Info */}
+                            <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-slate-500">
+                                <span className="flex items-center gap-1"><Phone size={12} /> {store.contact}</span>
+                                <span className="flex items-center gap-1"><MapPin size={12} /> {store.address}</span>
+                            </div>
+
                             <div className="flex items-center gap-6 mt-4 pt-4 border-t border-slate-100">
                                 <div className="flex items-center gap-2 text-sm text-slate-500">
                                     <Package size={16} />
@@ -222,6 +248,16 @@ export default function MasterStores() {
                                     <ShoppingCart size={16} />
                                     <span>{store._count?.Order || 0} orders</span>
                                 </div>
+                                
+                                {/* Bank Details Toggle */}
+                                <button
+                                    onClick={() => toggleBankDetails(store.id)}
+                                    className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700"
+                                >
+                                    <CreditCard size={14} />
+                                    Bank Details
+                                    {expandedStoreId === store.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                </button>
                                 
                                 <div className="flex-1"></div>
 
@@ -275,6 +311,33 @@ export default function MasterStores() {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Expanded Bank Details */}
+                            {expandedStoreId === store.id && (
+                                <div className="mt-4 p-4 bg-slate-50 rounded-lg">
+                                    <h4 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
+                                        <CreditCard size={16} /> Bank Details
+                                    </h4>
+                                    <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                                        <div>
+                                            <p className="text-xs text-slate-400">Bank Name</p>
+                                            <p className="text-slate-700 font-medium">{store.bankName || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-400">Account Number</p>
+                                            <p className="text-slate-700 font-mono">{store.bankAccount || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-400">IFSC Code</p>
+                                            <p className="text-slate-700 font-mono">{store.bankIfsc || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-400">UPI ID</p>
+                                            <p className="text-slate-700">{store.bankUpi || '-'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -286,31 +349,123 @@ export default function MasterStores() {
                 {/* Edit Modal */}
                 {showEditModal && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-xl p-6 w-full max-w-md">
-                            <h2 className="text-xl font-semibold text-slate-800 mb-4">Edit Store</h2>
+                        <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-semibold text-slate-800">Edit Store</h2>
+                                <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-600">
+                                    <X size={24} />
+                                </button>
+                            </div>
                             <form onSubmit={handleEditSubmit}>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-slate-600 mb-1">Store Name</label>
-                                        <input
-                                            type="text"
-                                            value={editForm.name}
-                                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                            className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400"
-                                            required
-                                        />
+                                {/* Store Info */}
+                                <div className="space-y-4 mb-6">
+                                    <h3 className="text-sm font-medium text-slate-500">Store Information</h3>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm text-slate-600 mb-1">Store Name *</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.name}
+                                                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-slate-600 mb-1">Email *</label>
+                                            <input
+                                                type="email"
+                                                value={editForm.email}
+                                                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400"
+                                                required
+                                            />
+                                        </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm text-slate-600 mb-1">Description</label>
+                                        <label className="block text-sm text-slate-600 mb-1">Description *</label>
                                         <textarea
                                             value={editForm.description}
                                             onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                            rows={3}
+                                            rows={2}
                                             className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400 resize-none"
                                             required
                                         />
                                     </div>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm text-slate-600 mb-1">Contact *</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.contact}
+                                                onChange={(e) => setEditForm({ ...editForm, contact: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-slate-600 mb-1">Address *</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.address}
+                                                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
+
+                                {/* Bank Details */}
+                                <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
+                                    <h3 className="text-sm font-medium text-slate-500 flex items-center gap-2">
+                                        <CreditCard size={16} /> Bank Details
+                                    </h3>
+                                    <div>
+                                        <label className="block text-sm text-slate-600 mb-1">Bank Name *</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.bankName}
+                                            onChange={(e) => setEditForm({ ...editForm, bankName: e.target.value })}
+                                            placeholder="e.g., HDFC Bank"
+                                            className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm text-slate-600 mb-1">Account Number *</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.bankAccount}
+                                                onChange={(e) => setEditForm({ ...editForm, bankAccount: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400 font-mono"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-slate-600 mb-1">IFSC Code *</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.bankIfsc}
+                                                onChange={(e) => setEditForm({ ...editForm, bankIfsc: e.target.value.toUpperCase() })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400 font-mono uppercase"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-slate-600 mb-1">UPI ID (Optional)</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.bankUpi}
+                                            onChange={(e) => setEditForm({ ...editForm, bankUpi: e.target.value })}
+                                            placeholder="yourstore@upi"
+                                            className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="flex gap-3 mt-6">
                                     <button
                                         type="button"

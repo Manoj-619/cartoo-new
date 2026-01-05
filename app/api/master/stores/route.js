@@ -51,7 +51,11 @@ export async function PUT(request) {
             return NextResponse.json({ error: "Not authorized" }, { status: 401 });
         }
 
-        const { storeId, name, description, isActive, status } = await request.json();
+        const { 
+            storeId, name, description, email, contact, address,
+            bankAccount, bankIfsc, bankName, bankUpi,
+            isActive, status 
+        } = await request.json();
 
         if (!storeId) {
             return NextResponse.json({ error: "Store ID required" }, { status: 400 });
@@ -60,6 +64,13 @@ export async function PUT(request) {
         const updateData = {};
         if (name !== undefined) updateData.name = name;
         if (description !== undefined) updateData.description = description;
+        if (email !== undefined) updateData.email = email;
+        if (contact !== undefined) updateData.contact = contact;
+        if (address !== undefined) updateData.address = address;
+        if (bankAccount !== undefined) updateData.bankAccount = bankAccount;
+        if (bankIfsc !== undefined) updateData.bankIfsc = bankIfsc;
+        if (bankName !== undefined) updateData.bankName = bankName;
+        if (bankUpi !== undefined) updateData.bankUpi = bankUpi || null;
         if (isActive !== undefined) updateData.isActive = isActive;
         if (status !== undefined) updateData.status = status;
 

@@ -1,12 +1,17 @@
 import { currentUser } from '@clerk/nextjs/server';
 
 // Master vendor emails - can manage all stores
-const MASTER_VENDOR_EMAILS = [
+// Configure via MASTER_VENDOR_EMAILS env variable (comma-separated)
+// Falls back to hardcoded list if env not set
+const getDefaultMasterEmails = () => [
     'eswaricartoo123@gmail.com',
     'yuvi2k22@gmail.com',
     'chrismanoj62@gmail.com'
-    // Add more master vendor emails here
 ]
+
+const MASTER_VENDOR_EMAILS = process.env.MASTER_VENDOR_EMAILS 
+    ? process.env.MASTER_VENDOR_EMAILS.split(',').map(e => e.trim())
+    : getDefaultMasterEmails()
 
 /**
  * Check if the current user is a master vendor
