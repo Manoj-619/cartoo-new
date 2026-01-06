@@ -24,36 +24,66 @@ const ProductDetails = ({ product }) => {
 
     const router = useRouter()
 
-    // Parse variants from product
-    const variants = useMemo(() => {
+    // Parse variants from product - handle both old and new structure
+    const { colorVariants, hasNewStructure } = useMemo(() => {
         if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
-            return product.variants
+            // Check if it's the new structure (has sizes array)
+            const isNewStructure = product.variants[0]?.sizes && Array.isArray(product.variants[0].sizes)
+            
+            if (isNewStructure) {
+                return { colorVariants: product.variants, hasNewStructure: true }
+            }
+            
+            // Old flat structure - convert to display
+            return { 
+                colorVariants: product.variants.map(v => ({
+                    ...v,
+                    sizes: [{ size: v.name || 'Default', mrp: v.mrp, price: v.price }]
+                })), 
+                hasNewStructure: false 
+            }
         }
-        // Fallback for products without variants - create one from base product data
-        return [{
-            name: "",
-            mrp: product.mrp,
-            price: product.price,
-            color: product.colors?.[0] || "",
-            colorHex: "#000000",
-            images: product.images
-        }]
+        
+        // Fallback for products without variants
+        return {
+            colorVariants: [{
+                name: "",
+                color: product.colors?.[0] || "",
+                colorHex: "#000000",
+                images: product.images,
+                sizes: [{ size: 'Default', mrp: product.mrp, price: product.price }]
+            }],
+            hasNewStructure: false
+        }
     }, [product])
 
-    const hasMultipleVariants = variants.length > 1
+    // Check if we should show variant selector (multiple variants with names or colors)
+    const hasValidVariants = colorVariants.length > 1 || colorVariants.some(cv => cv.name || cv.color)
+    const showVariantSelector = hasValidVariants && colorVariants.some(cv => cv.name || cv.color)
 
-    const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
-    const selectedVariant = variants[selectedVariantIndex]
+    const [selectedColorIndex, setSelectedColorIndex] = useState(0)
+    const [selectedSizeIndex, setSelectedSizeIndex] = useState(0)
     
-    const [mainImage, setMainImage] = useState(selectedVariant.images?.[0] || product.images[0]);
+    const selectedColor = colorVariants[selectedColorIndex]
+    const selectedSize = selectedColor?.sizes?.[selectedSizeIndex] || { mrp: product.mrp, price: product.price }
+    
+    // Check if we should show size selector (has actual size values, not empty or 'Default')
+    const hasValidSizes = selectedColor?.sizes?.some(s => s.size && s.size !== 'Default' && s.size.trim() !== '')
+    
+    const [mainImage, setMainImage] = useState(selectedColor.images?.[0] || product.images[0]);
 
-    // Update main image when variant changes
-    const handleVariantChange = (index) => {
-        setSelectedVariantIndex(index)
-        const newVariant = variants[index]
-        if (newVariant.images?.[0]) {
-            setMainImage(newVariant.images[0])
+    // Update main image when color changes
+    const handleColorChange = (index) => {
+        setSelectedColorIndex(index)
+        setSelectedSizeIndex(0) // Reset size selection when color changes
+        const newColor = colorVariants[index]
+        if (newColor.images?.[0]) {
+            setMainImage(newColor.images[0])
         }
+    }
+
+    const handleSizeChange = (index) => {
+        setSelectedSizeIndex(index)
     }
 
     const addToCartHandler = () => {
@@ -80,9 +110,9 @@ const ProductDetails = ({ product }) => {
         : 0;
 
     // Get current display values
-    const currentPrice = selectedVariant.price || product.price
-    const currentMrp = selectedVariant.mrp || product.mrp
-    const currentImages = selectedVariant.images || product.images
+    const currentPrice = selectedSize.price || product.price
+    const currentMrp = selectedSize.mrp || product.mrp
+    const currentImages = selectedColor.images || product.images
     const discountPercent = ((currentMrp - currentPrice) / currentMrp * 100).toFixed(0)
     
     return (
@@ -133,44 +163,64 @@ const ProductDetails = ({ product }) => {
                     <p className="text-sm ml-3 text-slate-500">{product.rating.length} Reviews</p>
                 </div>
 
-                {/* Variant Selector */}
-                {hasMultipleVariants && (
+                {/* Variant Selector - only show if there are multiple variants with names or colors */}
+                {showVariantSelector && (
                     <div className="mt-6">
-                        <p className="text-sm font-medium text-slate-600 mb-3">Select Variant:</p>
+                        <p className="text-sm font-medium text-slate-600 mb-3">
+                            {selectedColor.color ? 'Color' : 'Variant'}: <span className="text-slate-800">{selectedColor.name || selectedColor.color}</span>
+                        </p>
                         <div className="flex flex-wrap gap-2">
-                            {variants.map((variant, index) => (
-                                <button
-                                    key={index}
-                                    type="button"
-                                    onClick={() => handleVariantChange(index)}
-                                    className={`px-4 py-2.5 rounded-lg border-2 transition font-medium text-sm flex items-center gap-2 ${
-                                        selectedVariantIndex === index 
-                                            ? 'bg-slate-800 text-white border-slate-800' 
-                                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
-                                    }`}
-                                >
-                                    {variant.color && (
-                                        <span 
-                                            className="w-4 h-4 rounded-full border border-slate-300" 
-                                            style={{ backgroundColor: variant.colorHex || '#6B7280' }}
-                                        />
-                                    )}
-                                    {variant.name || `Option ${index + 1}`}
-                                </button>
-                            ))}
+                            {colorVariants.map((variant, index) => {
+                                const displayName = variant.name || variant.color
+                                if (!displayName) return null // Skip variants without name or color
+                                
+                                return (
+                                    <button
+                                        key={index}
+                                        type="button"
+                                        onClick={() => handleColorChange(index)}
+                                        className={`px-4 py-2.5 rounded-lg border-2 transition font-medium text-sm flex items-center gap-2 ${
+                                            selectedColorIndex === index 
+                                                ? 'bg-slate-800 text-white border-slate-800' 
+                                                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                                        }`}
+                                    >
+                                        {variant.color && (
+                                            <span 
+                                                className="w-4 h-4 rounded-full border border-slate-300" 
+                                                style={{ backgroundColor: variant.colorHex || '#6B7280' }}
+                                            />
+                                        )}
+                                        {displayName}
+                                    </button>
+                                )
+                            })}
                         </div>
                     </div>
                 )}
 
-                {/* Current variant color display */}
-                {selectedVariant.color && (
-                    <div className="flex items-center gap-2 mt-4">
-                        <span className="text-slate-500">Color:</span>
-                        <span 
-                            className="w-5 h-5 rounded-full border border-slate-300" 
-                            style={{ backgroundColor: selectedVariant.colorHex || '#6B7280' }}
-                        />
-                        <span className="font-medium text-slate-700">{selectedVariant.color}</span>
+                {/* Size Selector - only show if there are actual sizes with values */}
+                {hasValidSizes && (
+                    <div className="mt-6">
+                        <p className="text-sm font-medium text-slate-600 mb-3">
+                            Size: <span className="text-slate-800">{selectedSize.size}</span>
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            {selectedColor.sizes.filter(s => s.size && s.size !== 'Default' && s.size.trim() !== '').map((sizeVar, index) => (
+                                <button
+                                    key={index}
+                                    type="button"
+                                    onClick={() => handleSizeChange(index)}
+                                    className={`min-w-[50px] px-4 py-2.5 rounded-lg border-2 transition font-medium text-sm ${
+                                        selectedSizeIndex === index 
+                                            ? 'bg-slate-800 text-white border-slate-800' 
+                                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                                    }`}
+                                >
+                                    {sizeVar.size}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
 

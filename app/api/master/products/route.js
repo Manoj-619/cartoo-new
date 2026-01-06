@@ -44,7 +44,7 @@ export async function GET(request) {
     }
 }
 
-// Add a new product to any store
+// Add a new product to any store (with color > size structure)
 export async function POST(request) {
     try {
         const isMaster = await checkMasterAuth(request);
@@ -70,30 +70,30 @@ export async function POST(request) {
             return NextResponse.json({ error: "Store not found" }, { status: 404 });
         }
 
-        // Parse variants
-        let variants = [];
+        // Parse color variants (new structure: color variants with nested sizes)
+        let colorVariants = [];
         try {
-            variants = JSON.parse(variantsData || "[]");
+            colorVariants = JSON.parse(variantsData || "[]");
         } catch (e) {
             return NextResponse.json({ error: "Invalid variants data" }, { status: 400 });
         }
 
-        if (variants.length === 0) {
-            return NextResponse.json({ error: "At least one variant is required" }, { status: 400 });
+        if (colorVariants.length === 0) {
+            return NextResponse.json({ error: "At least one color variant is required" }, { status: 400 });
         }
 
-        // Process each variant's images
+        // Process each color variant's images
         const processedVariants = [];
 
-        for (let i = 0; i < variants.length; i++) {
-            const variant = variants[i];
+        for (let i = 0; i < colorVariants.length; i++) {
+            const colorVariant = colorVariants[i];
             const variantImages = formData.getAll(`variant_${i}_images`);
 
             if (variantImages.length === 0) {
-                return NextResponse.json({ error: `Variant ${i + 1} requires at least one image` }, { status: 400 });
+                return NextResponse.json({ error: `Color "${colorVariant.color || i + 1}" requires at least one image` }, { status: 400 });
             }
 
-            // Upload images for this variant
+            // Upload images for this color variant
             const uploadedImages = await Promise.all(variantImages.map(async (image) => {
                 const buffer = Buffer.from(await image.arrayBuffer());
                 const response = await imagekit.upload({
@@ -113,27 +113,31 @@ export async function POST(request) {
             }));
 
             processedVariants.push({
-                name: variant.name || "",
-                mrp: Number(variant.mrp) || 0,
-                price: Number(variant.price) || 0,
-                color: variant.color || "",
-                colorHex: variant.colorHex || "#000000",
-                images: uploadedImages
+                name: colorVariant.name || "",
+                color: colorVariant.color || "",
+                colorHex: colorVariant.colorHex || "#000000",
+                images: uploadedImages,
+                sizes: (colorVariant.sizes || []).map(s => ({
+                    size: s.size || "",
+                    mrp: Number(s.mrp) || 0,
+                    price: Number(s.price) || 0
+                }))
             });
         }
 
-        // Use first variant as default product values
+        // Extract data for product base fields
         const firstVariant = processedVariants[0];
+        const firstSize = firstVariant.sizes[0] || { mrp: 0, price: 0 };
         const allImages = processedVariants.flatMap(v => v.images);
         const allColors = [...new Set(processedVariants.map(v => v.color).filter(Boolean))];
-        const allSizes = [...new Set(processedVariants.map(v => v.name).filter(Boolean))];
+        const allSizes = [...new Set(processedVariants.flatMap(v => v.sizes.map(s => s.size)).filter(Boolean))];
 
         await prisma.product.create({
             data: {
                 name,
                 description,
-                mrp: firstVariant.mrp,
-                price: firstVariant.price,
+                mrp: firstSize.mrp,
+                price: firstSize.price,
                 gst,
                 category,
                 colors: allColors,
@@ -151,7 +155,7 @@ export async function POST(request) {
     }
 }
 
-// Update a product
+// Update a product (JSON only, for simple updates like stock toggle)
 export async function PUT(request) {
     try {
         const isMaster = await checkMasterAuth(request);
@@ -174,11 +178,25 @@ export async function PUT(request) {
 
         if (variants !== undefined && Array.isArray(variants) && variants.length > 0) {
             updateData.variants = variants;
-            const firstVariant = variants[0];
-            updateData.mrp = Number(firstVariant.mrp);
-            updateData.price = Number(firstVariant.price);
-            updateData.colors = [...new Set(variants.map(v => v.color).filter(Boolean))];
-            updateData.sizes = [...new Set(variants.map(v => v.name).filter(Boolean))];
+            
+            // Check if new structure (has sizes array)
+            const hasNewStructure = variants[0]?.sizes && Array.isArray(variants[0].sizes);
+            
+            if (hasNewStructure) {
+                const firstVariant = variants[0];
+                const firstSize = firstVariant.sizes[0] || { mrp: 0, price: 0 };
+                updateData.mrp = Number(firstSize.mrp);
+                updateData.price = Number(firstSize.price);
+                updateData.colors = [...new Set(variants.map(v => v.color).filter(Boolean))];
+                updateData.sizes = [...new Set(variants.flatMap(v => v.sizes?.map(s => s.size) || []).filter(Boolean))];
+            } else {
+                // Legacy structure
+                const firstVariant = variants[0];
+                updateData.mrp = Number(firstVariant.mrp);
+                updateData.price = Number(firstVariant.price);
+                updateData.colors = [...new Set(variants.map(v => v.color).filter(Boolean))];
+                updateData.sizes = [...new Set(variants.map(v => v.name).filter(Boolean))];
+            }
         }
 
         await prisma.product.update({

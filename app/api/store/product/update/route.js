@@ -5,6 +5,7 @@ import { getAuth } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server";
 
 // Update a product with image support (uses FormData)
+// Supports new color > size structure
 export async function PUT(request) {
     try {
         const { userId } = getAuth(request)
@@ -35,23 +36,23 @@ export async function PUT(request) {
             return NextResponse.json({ error: 'product not found' }, { status: 404 })
         }
 
-        // Parse variants
-        let variants = []
+        // Parse variants (new structure: color variants with nested sizes)
+        let colorVariants = []
         try {
-            variants = JSON.parse(variantsData || "[]")
+            colorVariants = JSON.parse(variantsData || "[]")
         } catch (e) {
             return NextResponse.json({ error: 'invalid variants data' }, { status: 400 })
         }
 
-        // Process each variant's images
+        // Process each color variant's images
         const processedVariants = []
 
-        for (let i = 0; i < variants.length; i++) {
-            const variant = variants[i]
+        for (let i = 0; i < colorVariants.length; i++) {
+            const colorVariant = colorVariants[i]
             const newImages = formData.getAll(`variant_${i}_new_images`)
             
             // Start with existing images that weren't removed
-            let variantImages = variant.existingImages || []
+            let variantImages = colorVariant.existingImages || []
 
             // Upload new images if any
             if (newImages && newImages.length > 0) {
@@ -81,12 +82,15 @@ export async function PUT(request) {
             }
 
             processedVariants.push({
-                name: variant.name || "",
-                mrp: Number(variant.mrp) || 0,
-                price: Number(variant.price) || 0,
-                color: variant.color || "",
-                colorHex: variant.colorHex || "#000000",
-                images: variantImages
+                name: colorVariant.name || "",
+                color: colorVariant.color || "",
+                colorHex: colorVariant.colorHex || "#000000",
+                images: variantImages,
+                sizes: (colorVariant.sizes || []).map(s => ({
+                    size: s.size || "",
+                    mrp: Number(s.mrp) || 0,
+                    price: Number(s.price) || 0
+                }))
             })
         }
 
@@ -99,13 +103,15 @@ export async function PUT(request) {
             variants: processedVariants
         }
 
-        // Update base product values from first variant
+        // Update base product values from first variant/size
         if (processedVariants.length > 0) {
             const firstVariant = processedVariants[0]
-            updateData.mrp = Number(firstVariant.mrp)
-            updateData.price = Number(firstVariant.price)
+            const firstSize = firstVariant.sizes[0] || { mrp: 0, price: 0 }
+            
+            updateData.mrp = Number(firstSize.mrp)
+            updateData.price = Number(firstSize.price)
             updateData.colors = [...new Set(processedVariants.map(v => v.color).filter(Boolean))]
-            updateData.sizes = [...new Set(processedVariants.map(v => v.name).filter(Boolean))]
+            updateData.sizes = [...new Set(processedVariants.flatMap(v => v.sizes?.map(s => s.size) || []).filter(Boolean))]
             updateData.images = processedVariants.flatMap(v => v.images)
         }
 

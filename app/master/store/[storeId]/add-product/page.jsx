@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
-import { Plus, Trash2, Package, ArrowLeft } from "lucide-react"
+import { Plus, Trash2, Package, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { assets } from "@/assets/assets"
@@ -11,15 +11,23 @@ import { toast } from "react-hot-toast"
 
 const categories = ['Electronics', 'Clothing', 'Home & Kitchen', 'Beauty & Health', 'Toys & Games', 'Sports & Outdoors', 'Books & Media', 'Food & Drink', 'Hobbies & Crafts', 'Others']
 const gstOptions = [0, 5, 18, 40]
+const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL']
 
-const createEmptyVariant = () => ({
+const createEmptySize = () => ({
     id: Date.now() + Math.random(),
-    name: "",
+    size: "",
+    mrp: "",
+    price: ""
+})
+
+const createEmptyColorVariant = () => ({
+    id: Date.now() + Math.random(),
+    name: "",  // Variant name (e.g., "Summer Collection", "Premium", etc.)
     color: "",
     colorHex: "#000000",
-    mrp: "",
-    price: "",
-    images: { 1: null, 2: null, 3: null, 4: null }
+    images: { 1: null, 2: null, 3: null, 4: null },
+    sizes: [createEmptySize()],
+    expanded: true
 })
 
 export default function MasterAddProduct() {
@@ -35,30 +43,93 @@ export default function MasterAddProduct() {
     const [category, setCategory] = useState("")
     const [gst, setGst] = useState(0)
     
-    // Variants
-    const [variants, setVariants] = useState([createEmptyVariant()])
+    // Color variants (each color has multiple sizes)
+    const [colorVariants, setColorVariants] = useState([createEmptyColorVariant()])
 
-    const updateVariant = (index, field, value) => {
-        setVariants(prev => prev.map((v, i) => i === index ? { ...v, [field]: value } : v))
+    const updateColorVariant = (colorIndex, field, value) => {
+        setColorVariants(prev => prev.map((cv, i) => 
+            i === colorIndex ? { ...cv, [field]: value } : cv
+        ))
     }
 
-    const handleImageUpload = (variantIndex, imageKey, file) => {
-        const variant = variants[variantIndex]
-        updateVariant(variantIndex, 'images', { ...variant.images, [imageKey]: file })
+    const toggleColorExpanded = (colorIndex) => {
+        setColorVariants(prev => prev.map((cv, i) => 
+            i === colorIndex ? { ...cv, expanded: !cv.expanded } : cv
+        ))
     }
 
-    const addVariant = () => {
-        const lastVariant = variants[variants.length - 1]
-        const newVariant = createEmptyVariant()
-        if (lastVariant.mrp) newVariant.mrp = lastVariant.mrp
-        if (lastVariant.price) newVariant.price = lastVariant.price
-        setVariants(prev => [...prev, newVariant])
+    const updateSize = (colorIndex, sizeIndex, field, value) => {
+        setColorVariants(prev => prev.map((cv, ci) => 
+            ci === colorIndex 
+                ? { 
+                    ...cv, 
+                    sizes: cv.sizes.map((s, si) => 
+                        si === sizeIndex ? { ...s, [field]: value } : s
+                    )
+                }
+                : cv
+        ))
     }
 
-    const removeVariant = (index) => {
-        if (variants.length > 1) {
-            setVariants(prev => prev.filter((_, i) => i !== index))
+    const addSize = (colorIndex) => {
+        const lastSize = colorVariants[colorIndex].sizes[colorVariants[colorIndex].sizes.length - 1]
+        const newSize = createEmptySize()
+        if (lastSize) {
+            newSize.mrp = lastSize.mrp
+            newSize.price = lastSize.price
         }
+        setColorVariants(prev => prev.map((cv, i) => 
+            i === colorIndex ? { ...cv, sizes: [...cv.sizes, newSize] } : cv
+        ))
+    }
+
+    const removeSize = (colorIndex, sizeIndex) => {
+        if (colorVariants[colorIndex].sizes.length > 1) {
+            setColorVariants(prev => prev.map((cv, i) => 
+                i === colorIndex 
+                    ? { ...cv, sizes: cv.sizes.filter((_, si) => si !== sizeIndex) }
+                    : cv
+            ))
+        }
+    }
+
+    const handleImageUpload = (colorIndex, imageKey, file) => {
+        const cv = colorVariants[colorIndex]
+        updateColorVariant(colorIndex, 'images', { ...cv.images, [imageKey]: file })
+    }
+
+    const addColorVariant = () => {
+        setColorVariants(prev => [...prev, createEmptyColorVariant()])
+    }
+
+    const removeColorVariant = (colorIndex) => {
+        if (colorVariants.length > 1) {
+            setColorVariants(prev => prev.filter((_, i) => i !== colorIndex))
+        }
+    }
+
+    const addQuickSizes = (colorIndex, sizesToAdd) => {
+        const existingSizes = colorVariants[colorIndex].sizes.map(s => s.size.toUpperCase())
+        const newSizes = sizesToAdd.filter(s => !existingSizes.includes(s.toUpperCase()))
+        
+        if (newSizes.length === 0) {
+            toast.error('All selected sizes already exist')
+            return
+        }
+
+        const lastSize = colorVariants[colorIndex].sizes[colorVariants[colorIndex].sizes.length - 1]
+        const sizesWithPrices = newSizes.map(size => ({
+            id: Date.now() + Math.random(),
+            size,
+            mrp: lastSize?.mrp || "",
+            price: lastSize?.price || ""
+        }))
+
+        setColorVariants(prev => prev.map((cv, i) => 
+            i === colorIndex 
+                ? { ...cv, sizes: [...cv.sizes.filter(s => s.size), ...sizesWithPrices] }
+                : cv
+        ))
     }
 
     const onSubmitHandler = async (e) => {
@@ -68,14 +139,23 @@ export default function MasterAddProduct() {
             return toast.error("Please fill product name, description and category")
         }
 
-        for (let i = 0; i < variants.length; i++) {
-            const v = variants[i]
-            const hasImages = v.images[1] || v.images[2] || v.images[3] || v.images[4]
+        // Validate variants
+        for (let ci = 0; ci < colorVariants.length; ci++) {
+            const cv = colorVariants[ci]
+            const variantLabel = cv.name || `Variant ${ci + 1}`
+            const hasImages = cv.images[1] || cv.images[2] || cv.images[3] || cv.images[4]
+            
             if (!hasImages) {
-                return toast.error(`Variant ${i + 1}: Please upload at least one image`)
+                return toast.error(`${variantLabel}: Please upload at least one image`)
             }
-            if (!v.mrp || !v.price) {
-                return toast.error(`Variant ${i + 1}: Please enter MRP and Price`)
+            
+            // Validate pricing (size is optional, but prices are required)
+            for (let si = 0; si < cv.sizes.length; si++) {
+                const size = cv.sizes[si]
+                if (!size.mrp || !size.price) {
+                    const sizeLabel = size.size || `Entry ${si + 1}`
+                    return toast.error(`${variantLabel}, ${sizeLabel}: Please enter Actual Price and Offer Price`)
+                }
             }
         }
 
@@ -91,19 +171,22 @@ export default function MasterAddProduct() {
             formData.append('gst', gst)
             formData.append('category', category)
             
-            const variantsForJson = variants.map(v => ({
-                name: v.name,
-                mrp: v.mrp,
-                price: v.price,
-                color: v.color,
-                colorHex: v.colorHex
+            const variantsForJson = colorVariants.map(cv => ({
+                name: cv.name || "",
+                color: cv.color,
+                colorHex: cv.colorHex,
+                sizes: cv.sizes.map(s => ({
+                    size: s.size,
+                    mrp: parseFloat(s.mrp),
+                    price: parseFloat(s.price)
+                }))
             }))
             formData.append('variants', JSON.stringify(variantsForJson))
 
-            variants.forEach((v, index) => {
-                Object.keys(v.images).forEach((key) => {
-                    if (v.images[key]) {
-                        formData.append(`variant_${index}_images`, v.images[key])
+            colorVariants.forEach((cv, index) => {
+                Object.keys(cv.images).forEach((key) => {
+                    if (cv.images[key]) {
+                        formData.append(`variant_${index}_images`, cv.images[key])
                     }
                 })
             })
@@ -136,7 +219,7 @@ export default function MasterAddProduct() {
                     <Package className="text-purple-600" size={28} />
                     <h1 className="text-2xl font-semibold text-slate-800">Add New Product</h1>
                 </div>
-                <p className="text-slate-500 mb-6">Add a product to this store with multiple variants</p>
+                <p className="text-slate-500 mb-6">Add a product with multiple colors and sizes</p>
 
                 {/* Product Info */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
@@ -149,7 +232,7 @@ export default function MasterAddProduct() {
                                 type="text" 
                                 value={productName} 
                                 onChange={(e) => setProductName(e.target.value)}
-                                placeholder="e.g., iPhone 15, Cotton T-Shirt" 
+                                placeholder="e.g., Cotton T-Shirt, Running Shoes" 
                                 className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400" 
                                 required 
                             />
@@ -199,116 +282,195 @@ export default function MasterAddProduct() {
                 {/* Variants */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="font-medium text-slate-700">Product Variants</h2>
+                        <h2 className="font-medium text-slate-700">Variants</h2>
                         <span className="text-sm bg-purple-100 text-purple-600 px-3 py-1 rounded-full font-medium">
-                            {variants.length} variant{variants.length > 1 ? 's' : ''}
+                            {colorVariants.length} variant{colorVariants.length > 1 ? 's' : ''}
                         </span>
                     </div>
 
-                    {variants.map((variant, index) => (
-                        <div key={variant.id} className="mb-4 p-5 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    <span className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
-                                        {index + 1}
-                                    </span>
-                                    <h3 className="font-medium text-slate-700">
-                                        {variant.name || `Variant ${index + 1}`}
-                                    </h3>
-                                </div>
-                                {variants.length > 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => removeVariant(index)}
-                                        className="text-red-500 hover:text-red-600 p-2"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className="flex flex-wrap gap-4 mb-4">
-                                <div className="flex-1 min-w-[150px]">
-                                    <label className="block text-xs text-slate-500 mb-1">Variant Name</label>
+                    {colorVariants.map((colorVariant, colorIndex) => (
+                        <div key={colorVariant.id} className="mb-4 border border-slate-200 rounded-xl overflow-hidden">
+                            {/* Variant Header */}
+                            <div className="flex items-center justify-between p-4 bg-slate-100">
+                                <div className="flex items-center gap-3 flex-1">
+                                    <span className="text-sm font-medium text-slate-500">#{colorIndex + 1}</span>
                                     <input 
                                         type="text" 
-                                        value={variant.name} 
-                                        onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                                        placeholder="e.g., 128GB" 
-                                        className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400 bg-white"
+                                        value={colorVariant.name} 
+                                        onChange={(e) => updateColorVariant(colorIndex, 'name', e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        placeholder="Enter variant name (e.g., 64GB, Premium, Classic)"
+                                        className="flex-1 max-w-[300px] px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg outline-none focus:border-purple-400 transition"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-xs text-slate-500 mb-1">Color</label>
-                                    <div className="flex items-center gap-2">
-                                        <input 
-                                            type="text" 
-                                            value={variant.color} 
-                                            onChange={(e) => updateVariant(index, 'color', e.target.value)}
-                                            placeholder="Color" 
-                                            className="w-24 p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400 bg-white"
-                                        />
-                                        <input 
-                                            type="color" 
-                                            value={variant.colorHex}
-                                            onChange={(e) => updateVariant(index, 'colorHex', e.target.value)}
-                                            className="w-10 h-10 border border-slate-200 rounded-lg cursor-pointer"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-500 mb-1">MRP ($) <span className="text-red-400">*</span></label>
-                                    <input 
-                                        type="number" 
-                                        value={variant.mrp} 
-                                        onChange={(e) => updateVariant(index, 'mrp', e.target.value)}
-                                        placeholder="0" 
-                                        className="w-28 p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400 bg-white" 
-                                        required 
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-500 mb-1">Price ($) <span className="text-red-400">*</span></label>
-                                    <input 
-                                        type="number" 
-                                        value={variant.price} 
-                                        onChange={(e) => updateVariant(index, 'price', e.target.value)}
-                                        placeholder="0" 
-                                        className="w-28 p-2.5 border border-slate-200 rounded-lg outline-none focus:border-purple-400 bg-white" 
-                                        required 
-                                    />
+                                <div className="flex items-center gap-2">
+                                    {colorVariants.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); removeColorVariant(colorIndex); }}
+                                            className="text-red-500 hover:text-red-600 p-1.5"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleColorExpanded(colorIndex)}
+                                        className="p-1 hover:bg-slate-200 rounded transition"
+                                    >
+                                        {colorVariant.expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                    </button>
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-xs text-slate-500 mb-2">Images <span className="text-red-400">*</span></label>
-                                <div className="flex gap-3 flex-wrap">
-                                    {Object.keys(variant.images).map((key) => (
-                                        <label key={key} htmlFor={`img-${variant.id}-${key}`} className="cursor-pointer">
-                                            <Image
-                                                width={300}
-                                                height={300}
-                                                className='h-16 w-auto border border-slate-200 rounded-lg bg-white hover:border-purple-400 transition'
-                                                src={variant.images[key] ? URL.createObjectURL(variant.images[key]) : assets.upload_area}
-                                                alt=""
+                            {/* Variant Content */}
+                            {colorVariant.expanded && (
+                                <div className="p-5 bg-slate-50">
+                                    {/* Color (Optional) */}
+                                    <div className="mb-4 p-4 bg-white rounded-lg border border-slate-100">
+                                        <label className="block text-sm font-medium text-slate-600 mb-2">Color <span className="text-slate-400">(Optional)</span></label>
+                                        <div className="flex items-center gap-3">
+                                            <input 
+                                                type="color" 
+                                                value={colorVariant.colorHex}
+                                                onChange={(e) => updateColorVariant(colorIndex, 'colorHex', e.target.value)}
+                                                className="w-10 h-10 rounded-lg border border-slate-200 cursor-pointer"
+                                                title="Pick color"
                                             />
-                                            <input
-                                                type="file"
-                                                accept='image/*'
-                                                id={`img-${variant.id}-${key}`}
-                                                onChange={e => handleImageUpload(index, key, e.target.files[0])}
-                                                hidden
+                                            <input 
+                                                type="text" 
+                                                value={colorVariant.color} 
+                                                onChange={(e) => updateColorVariant(colorIndex, 'color', e.target.value)}
+                                                placeholder="e.g., Red, Navy Blue, Black"
+                                                className="flex-1 max-w-[250px] p-2.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-purple-400"
                                             />
-                                        </label>
-                                    ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Images */}
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-slate-600 mb-2">Product Images <span className="text-red-400">*</span></label>
+                                        <div className="flex gap-3 flex-wrap">
+                                            {Object.keys(colorVariant.images).map((key) => (
+                                                <label key={key} htmlFor={`img-${colorVariant.id}-${key}`} className="cursor-pointer group">
+                                                    <div className="relative">
+                                                        <Image
+                                                            width={300}
+                                                            height={300}
+                                                            className='h-16 w-auto border border-slate-200 rounded-lg bg-white group-hover:border-purple-400 transition'
+                                                            src={colorVariant.images[key] ? URL.createObjectURL(colorVariant.images[key]) : assets.upload_area}
+                                                            alt=""
+                                                        />
+                                                        {colorVariant.images[key] && (
+                                                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                                                <span className="text-white text-xs">✓</span>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <input
+                                                        type="file"
+                                                        accept='image/*'
+                                                        id={`img-${colorVariant.id}-${key}`}
+                                                        onChange={e => handleImageUpload(colorIndex, key, e.target.files[0])}
+                                                        hidden
+                                                    />
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-2">Upload up to 4 images for this variant</p>
+                                    </div>
+
+                                    {/* Sizes & Pricing */}
+                                    <div className="border-t border-slate-200 pt-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <label className="text-sm font-medium text-slate-600">Sizes & Pricing <span className="text-slate-400">(Optional)</span></label>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-slate-400">Quick add:</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => addQuickSizes(colorIndex, ['S', 'M', 'L', 'XL'])}
+                                                    className="text-xs px-2 py-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-300"
+                                                >
+                                                    S-XL
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => addQuickSizes(colorIndex, ['XS', 'S', 'M', 'L', 'XL', 'XXL'])}
+                                                    className="text-xs px-2 py-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-300"
+                                                >
+                                                    All
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            {colorVariant.sizes.map((size, sizeIndex) => (
+                                                <div key={size.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100">
+                                                    <div className="flex-1 grid grid-cols-3 gap-3">
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-slate-600 mb-1">Size</label>
+                                                            <input
+                                                                type="text"
+                                                                value={size.size}
+                                                                onChange={(e) => updateSize(colorIndex, sizeIndex, 'size', e.target.value)}
+                                                                placeholder="S, M, L"
+                                                                className="w-full p-2 text-sm border border-slate-200 rounded outline-none focus:border-purple-400"
+                                                                list={`sizes-${colorVariant.id}`}
+                                                            />
+                                                            <datalist id={`sizes-${colorVariant.id}`}>
+                                                                {defaultSizes.map(s => <option key={s} value={s} />)}
+                                                            </datalist>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-slate-600 mb-1">Actual Price <span className="text-red-400">*</span></label>
+                                                            <input
+                                                                type="number"
+                                                                value={size.mrp}
+                                                                onChange={(e) => updateSize(colorIndex, sizeIndex, 'mrp', e.target.value)}
+                                                                placeholder="0"
+                                                                className="w-full p-2 text-sm border border-slate-200 rounded outline-none focus:border-purple-400"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-slate-600 mb-1">Offer Price <span className="text-red-400">*</span></label>
+                                                            <input
+                                                                type="number"
+                                                                value={size.price}
+                                                                onChange={(e) => updateSize(colorIndex, sizeIndex, 'price', e.target.value)}
+                                                                placeholder="0"
+                                                                className="w-full p-2 text-sm border border-slate-200 rounded outline-none focus:border-purple-400"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    {colorVariant.sizes.length > 1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeSize(colorIndex, sizeIndex)}
+                                                            className="text-red-400 hover:text-red-600 p-1"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => addSize(colorIndex)}
+                                            className="w-full mt-3 py-2 border border-dashed border-slate-300 text-slate-500 rounded-lg hover:border-purple-400 hover:text-purple-600 transition flex items-center justify-center gap-1 text-sm"
+                                        >
+                                            <Plus size={14} /> Add Size
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     ))}
 
                     <button
                         type="button"
-                        onClick={addVariant}
+                        onClick={addColorVariant}
                         className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 rounded-xl hover:border-purple-400 hover:text-purple-600 transition flex items-center justify-center gap-2 font-medium"
                     >
                         <Plus size={20} /> Add Another Variant
