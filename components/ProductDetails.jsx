@@ -123,14 +123,26 @@ const ProductDetails = ({ product }) => {
                         <div 
                             key={index} 
                             onClick={() => setMainImage(image)} 
-                            className={`bg-slate-100 flex items-center justify-center size-26 rounded-lg group cursor-pointer transition ${mainImage === image ? 'ring-2 ring-slate-800' : ''}`}
+                            className={`bg-slate-100 flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-lg group cursor-pointer transition overflow-hidden p-2 ${mainImage === image ? 'ring-2 ring-slate-800' : ''}`}
                         >
-                            <Image src={image} className="group-hover:scale-103 group-active:scale-95 transition" alt="" width={45} height={45} />
+                            <Image 
+                                src={image} 
+                                className="w-full h-full object-contain group-hover:scale-105 group-active:scale-95 transition" 
+                                alt="" 
+                                width={80} 
+                                height={80} 
+                            />
                         </div>
                     ))}
                 </div>
-                <div className="flex justify-center items-center h-100 sm:size-113 bg-slate-100 rounded-lg ">
-                    <Image src={mainImage} alt="" width={250} height={250} />
+                <div className="flex justify-center items-center w-full sm:w-[450px] h-[350px] sm:h-[450px] bg-slate-100 rounded-lg overflow-hidden p-4">
+                    <Image 
+                        src={mainImage} 
+                        alt="" 
+                        width={400} 
+                        height={400} 
+                        className="w-full h-full object-contain"
+                    />
                 </div>
             </div>
             <div className="flex-1">
